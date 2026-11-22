@@ -1,0 +1,32 @@
+{
+  "name": "三角形突围",
+  "short_name": "三角形突围",
+  "description": "交战 · 搜索 · 撤离",
+  "lang": "zh-CN",
+  "start_url": "./?sharecode=T4N3NT47CW",
+  "scope": "./?sharecode=T4N3NT47CW",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#060b14",
+  "theme_color": "#060b14",
+  "icons": [
+    {
+      "src": "icons/icon-192.png?sharecode=T4N3NT47CW",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png?sharecode=T4N3NT47CW",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png?sharecode=T4N3NT47CW",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

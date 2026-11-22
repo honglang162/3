@@ -1,0 +1,13 @@
+- generic [ref=e2]:
+  - button "打开背包，快捷键 I" [ref=e5] [cursor=pointer]: 背包 I 0/24
+  - button "使用医疗品，快捷键 H" [ref=e6] [cursor=pointer]:
+    - generic [ref=e16]: "0"
+  - button "滑铲，快捷键 C 或 Shift": 滑铲 C
+  - button "救援队友，按住不放"
+  - button "翻转屏幕" [ref=e17] [cursor=pointer]
+  - generic: 进度自动保存在本机
+  - generic [ref=e21] [cursor=pointer]:
+    - generic [ref=e22]: 三角形突围
+    - generic [ref=e23]: EXTRACTION PROTOCOL
+    - button "开 始 游 戏" [ref=e24]
+  - status
