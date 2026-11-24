@@ -6840,13 +6840,16 @@ function nickAvatar(nick) {
   if (!s) return '指挥';
   return /^[A-Za-z0-9]/.test(s) ? s.slice(0, 2).toUpperCase() : s.slice(0, 2);
 }
-/* W16.86：官方头像名单 —— 名单里的玩家头像显示「官方」二字（而不是昵称首字） */
-var OFFICIAL_AVATAR_NICKS = ['曼巴红狼'];
-function isOfficialAvatar(nick) { return OFFICIAL_AVATAR_NICKS.indexOf(String(nick || '')) >= 0; }
+/* W16.86：官方头像名单 —— 名单里的玩家头像显示指定徽标字（而不是昵称首字） */
+/* W16.92：改成「昵称 → 徽标字」映射，云自从容显示「副」（副策划） */
+var SPECIAL_AVATAR_NICKS = { '曼巴红狼': '策划', '云自从容': '副' };
+function officialBadge(nick) { return SPECIAL_AVATAR_NICKS[String(nick || '')] || ''; }
+function isOfficialAvatar(nick) { return !!officialBadge(nick); }
 function setAvatarEl(el, nick) {
   if (!el) return;
-  if (isOfficialAvatar(nick)) {
-    el.textContent = '策划';
+  var badge = officialBadge(nick);
+  if (badge) {
+    el.textContent = badge;
     el.style.background = 'linear-gradient(135deg,#0ea5e9,#0369a1)';
     el.style.color = '#fff';
     el.style.fontSize = '12px';
@@ -9317,7 +9320,7 @@ function mpRenderLobby() {
     if (m) {
       var isMe = m.user_id === me;
       var avHtml = isOfficialAvatar(m.nick)
-        ? '<div class="avatar-s" style="background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff;font-size:11px;font-weight:700;letter-spacing:1px">策划</div>'
+        ? '<div class="avatar-s" style="background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff;font-size:11px;font-weight:700;letter-spacing:1px">' + officialBadge(m.nick) + '</div>'
         : '<div class="avatar-s">' + (m.nick || '干').slice(0, 1) + '</div>';
       html += '<div class="mp-member' + (isMe ? ' me' : '') + '">' +
         avHtml +
@@ -10646,14 +10649,14 @@ addEventListener('keydown', function(e) {
   document.getElementById('set-back-view').addEventListener('click', function() { show('home'); });
   /* W16.83：视野页最底下的隐蔽入口 —— 输对口令后跳转开发者控制台（独立 dev.html）
      W16.86：开发者本人（曼巴红狼）登录状态下免口令直接进；其他人必须输口令，
-     错误时明确提示。 */
+     错误时明确提示。W16.92：云自从容（副策划）同样免口令。 */
   (function() {
     var devBtn = document.getElementById('dev-entry');
     if (!devBtn) return;
-    var DEV_NICK = '曼巴红狼';
+    var DEV_NICKS = ['曼巴红狼', '云自从容'];
     devBtn.addEventListener('click', function() {
       var nick = (sbSess && sbSess.user) ? nickOf(sbSess.user) : '';
-      if (nick === DEV_NICK) {
+      if (DEV_NICKS.indexOf(nick) >= 0) {
         showToast('开发者身份确认，正在进入…');
         setTimeout(function() { location.href = 'dev.html'; }, 400);
         return;
