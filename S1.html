@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.1 2026-11-24 20:05';
+  var BUILD = 'W17.2 2026-11-24 23:40';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1707,10 +1707,10 @@
     <h2 id="s1-title">S1 赛季 · 起源</h2>
     <div class="s1-when">⏰ 11 月 30 日（周一）上线 · 开发进行中</div>
     <ul class="s1-list">
-      <li><b>🗺️ 地图焕新<i>计划中</i></b><span>每张地图独一无二——布局、地貌、建筑各不相同，告别一模一样</span></li>
-      <li><b>🧰 保险箱扩容<i>计划中</i></b><span>保险箱数量大幅增加，搜刮更有惊喜</span></li>
+      <li><b>🗺️ 地图焕新<i>首版已上线</i></b><span>每张地图独一无二——布局、地貌、建筑各不相同，告别一模一样</span></li>
+      <li><b>🧰 保险箱扩容<i>已上线</i></b><span>保险箱数量大幅增加，搜刮更有惊喜</span></li>
       <li><b>🗝️ 房卡房间<i>计划中</i></b><span>地图角落藏着需要刷卡的加密房间——房卡既能在地图里摸到，也能在商店购买</span></li>
-      <li><b>🪖 全新装备：头盔<i>计划中</i></b><span>头部防护正式登场，防护体系再添一环</span></li>
+      <li><b>🪖 全新装备：头盔<i>已上线</i></b><span>头部防护正式登场，防护体系再添一环</span></li>
       <li><b>🎨 六大品质体系<i>计划中</i></b><span>每种装备都有六档品质：白 · 绿 · 蓝 · 紫 · 金 · 红</span></li>
     </ul>
     <button id="s1-ok" type="button">期待一下！</button>
@@ -2188,6 +2188,7 @@ var SAFEBOX_STAGES = [
 var EQUIP_SLOTS = [
   { key:'weapon', label:'武器', short:'枪' },
   { key:'armor', label:'护甲', short:'甲' },
+  { key:'helmet', label:'头盔', short:'盔' },
   { key:'pack', label:'背包', short:'包' },
   { key:'rig', label:'胸挂', short:'挂' },
   { key:'med', label:'医疗', short:'药' },
@@ -2252,6 +2253,13 @@ var ITEM_DEFS = [
   { name:'复合陶瓷板甲', short:'陶瓷甲', rarity:'rare', value:2100, kind:'护甲', equip:'armor', armor:68, sources:['medical','safe','ai'] },
   { name:'重型动力装甲', short:'动力甲', rarity:'epic', value:4600, kind:'护甲', equip:'armor', armor:84, sources:['safe','ai'] },
   { name:'实验外骨骼装甲', short:'外骨骼', rarity:'legendary', value:8800, kind:'护甲', equip:'armor', armor:96, sources:['safe','ai'] },
+  /* S1：头盔六品质 —— 白/绿/蓝/紫/金/红，按 60% 折算进护甲，与护甲叠加 */
+  { name:'制式头盔', short:'头盔', rarity:'common', value:120, kind:'头盔', equip:'helmet', armor:8, sources:['supply','medical','ai'] },
+  { name:'战术头盔', short:'头盔', rarity:'uncommon', value:320, kind:'头盔', equip:'helmet', armor:14, sources:['weapon','supply','ai'] },
+  { name:'复合防弹头盔', short:'头盔', rarity:'rare', value:900, kind:'头盔', equip:'helmet', armor:22, sources:['weapon','safe','ai'] },
+  { name:'军用钛合金头盔', short:'头盔', rarity:'epic', value:2400, kind:'头盔', equip:'helmet', armor:32, sources:['safe','ai'] },
+  { name:'特勤夜视头盔', short:'头盔', rarity:'legendary', value:5200, kind:'头盔', equip:'helmet', armor:44, sources:['safe','ai'] },
+  { name:'原型动力头盔', short:'头盔', rarity:'mythic', value:12800, kind:'头盔', equip:'helmet', armor:60, sources:['safe','ai'] },
   { name:'战术挎包', short:'挎包', rarity:'common', value:320, kind:'背包', equip:'pack', slotBonus:12, sources:['supply','ai'] },
   { name:'突击背包', short:'突击包', rarity:'rare', value:1500, kind:'背包', equip:'pack', slotBonus:24, sources:['supply','ai'] },
   { name:'大容量驮包', short:'驮包', rarity:'epic', value:3200, kind:'背包', equip:'pack', slotBonus:36, sources:['safe','ai'] },
@@ -2280,7 +2288,7 @@ function mapMinLv(map) { return (map && map.minLv) || 1; }
 function mapLocked(map) { return playerLevel() < mapMinLv(map); }
 /* W16.32：配装价值门槛 —— 只算主战装备（武器 + 护甲），限制带多好的枪甲进图 */
 function gearValue() {
-  var sum = 0, keys = ['weapon', 'armor', 'pack', 'rig'];   // W16.49：胸挂计入装备价值
+  var sum = 0, keys = ['weapon', 'armor', 'helmet', 'pack', 'rig'];   // S1：头盔计入装备价值
   for (var i = 0; i < keys.length; i++) {
     var it = equip[keys[i]];
     if (it && it.value) sum += it.value;
@@ -2951,7 +2959,7 @@ else initBgm();
 
 /* ============ W5：仓库、买卖、配装、localStorage 存档 ============ */
 var SAVE_KEY = 'extractionW6.save.v2', SAVE_VER = 2;   // W6：新存档结构（安全箱）
-var equip = { weapon:null, armor:null, pack:null, rig:null, med:null, safebox:null };  // 装备实例（W16.49 增加胸挂）
+var equip = { weapon:null, armor:null, pack:null, rig:null, med:null, helmet:null, safebox:null };  // 装备实例（S1 增加头盔）
 /* W6.3：安全箱两格存放在 SECURE_SLOTS（见上方定义），死亡也不掉落 */
 var stash = [], money = 4500, totalRuns = 0, totalExtracts = 0, totalKills = 0, kindStats = {};
 /* W6：安全箱走「升级」流程，不占用商店货架 */
@@ -2971,7 +2979,8 @@ function bagCapacity() {
 }
 function armorValue() {
   var a = equip.armor ? equip.armor.armor : 0;
-  return Math.min(MAX_ARMOR, a);
+  var h = equip.helmet ? equip.helmet.armor : 0;   // S1：头盔按 60% 折算进护甲，与护甲叠加
+  return Math.min(MAX_ARMOR, a + Math.round(h * 0.6));
 }
 function currentWeapon() { return equip.weapon ? WEAPON_UPGRADES[equip.weapon.rarity] : null; }
 /* 实际开火参数：没配枪就拔军刀近战（W16.53），保证"裸配"也能打 */
@@ -3025,7 +3034,7 @@ function saveGame() {
     var data = {
       ver:SAVE_VER, money:money, stash:stash.map(serItem),
       equip:{ weapon:serItem(equip.weapon), armor:serItem(equip.armor), pack:serItem(equip.pack), rig:serItem(equip.rig),
-        med:serItem(equip.med), safebox:serItem(equip.safebox) },
+        med:serItem(equip.med), helmet:serItem(equip.helmet), safebox:serItem(equip.safebox) },
       run:bag.map(serItem), secure:SECURE_SLOTS.map(serItem), runActive:!runEnded && !player.dead,
       stats:{ runs:totalRuns, extracts:totalExtracts, kills:totalKills, xp:playerXp },
       mapId:(selectedMap && selectedMap.id) || 'radar',
@@ -3042,7 +3051,7 @@ function applySaveData(data) {
   stash = (data.stash || []).map(deItem).filter(Boolean);
   equip = { weapon:deItem(data.equip && data.equip.weapon), armor:deItem(data.equip && data.equip.armor),
     pack:deItem(data.equip && data.equip.pack), rig:deItem(data.equip && data.equip.rig),
-    med:deItem(data.equip && data.equip.med), safebox:deItem(data.equip && data.equip.safebox) };
+    med:deItem(data.equip && data.equip.med), helmet:deItem(data.equip && data.equip.helmet), safebox:deItem(data.equip && data.equip.safebox) };
   var ss = (data.secure && data.secure.length) ? data.secure : (data.secure ? [data.secure] : []);
   SECURE_SLOTS = ss.map(function(x) { return deItem(x); });
   syncSecureSlots();
@@ -3064,7 +3073,7 @@ function loadGame() {
   stash = (data.stash || []).map(deItem).filter(Boolean);
   equip = { weapon:deItem(data.equip && data.equip.weapon), armor:deItem(data.equip && data.equip.armor),
     pack:deItem(data.equip && data.equip.pack), rig:deItem(data.equip && data.equip.rig),
-    med:deItem(data.equip && data.equip.med), safebox:deItem(data.equip && data.equip.safebox) };
+    med:deItem(data.equip && data.equip.med), helmet:deItem(data.equip && data.equip.helmet), safebox:deItem(data.equip && data.equip.safebox) };
   var savedSafe = (data.secure && data.secure.length) ? data.secure : (data.secure ? [data.secure] : []);
   SECURE_SLOTS = savedSafe.map(function(x) { return deItem(x); });
   syncSecureSlots();
@@ -3079,7 +3088,7 @@ function loadGame() {
 function newSave() {
   money = 4500; totalRuns = 0; totalExtracts = 0; totalKills = 0; kindStats = {};
   playerXp = 0; savedMapId = 'radar';
-  stash = []; equip = { weapon:null, armor:null, pack:null, rig:null, med:null, safebox:null }; RUN_BAG = []; SECURE_SLOTS = [null, null];
+  stash = []; equip = { weapon:null, armor:null, pack:null, rig:null, med:null, helmet:null, safebox:null }; RUN_BAG = []; SECURE_SLOTS = [null, null];
   // 初始物资：一把短枪 + 轻甲 + 挎包 + 两卷绷带 + 一把备用短枪（可在仓库卖掉换钱）
   ['制式短枪','制式短枪','轻型防弹背心','战术挎包','轻型胸挂','消毒绷带','消毒绷带','战术安全箱'].forEach(function(name) {
     var def = ITEM_DEFS.filter(function(d) { return d.name === name; })[0];
@@ -3183,6 +3192,7 @@ function itemMetaText(it) {
   if (it.equip === 'weapon') { var w = WEAPON_UPGRADES[it.rarity]; return '伤害 ' + w.dmg + ' · 弹匣 ' + w.mag + ' · 射速 ' + w.fireGap.toFixed(2) + 's'; }
   if (it.equip === 'safebox') return '保底 ' + (it.secure || 0) + ' 格 · 阵亡不掉落';
   if (it.equip === 'armor') return '护甲 ' + it.armor + ' ≈ +' + Math.round(it.armor * ARMOR_PER_POINT) + ' 生命';
+  if (it.equip === 'helmet') return '防御 ' + it.armor + ' ≈ +' + Math.round(it.armor * 0.6 * ARMOR_PER_POINT) + ' 生命 · 与护甲叠加';
   if (it.equip === 'pack') return '额外 ' + it.slotBonus + ' 格';
   if (it.equip === 'rig') return '额外 ' + it.slotBonus + ' 格 · 与背包合并';
   if (it.equip === 'med') return '回复 ' + it.heal + ' 生命';
@@ -3209,6 +3219,7 @@ function renderLoadout() {
   var stats = [
     { k:'生命上限', v:player.maxHp, up:player.maxHp > 100 },
     { k:'护甲值', v:armorValue() + ' / ' + MAX_ARMOR, up:armorValue() > 0 },
+    { k:'头盔', v:equip.helmet ? equip.helmet.name + '（防御 +' + equip.helmet.armor + '）' : '未佩戴', up:!!equip.helmet },
     { k:'背包容量', v:BAG_SIZE + ' 格' + (equip.rig && equip.rig.slotBonus ? '（含胸挂 ' + equip.rig.slotBonus + '）' : ''), up:BAG_SIZE > BASE_BAG_SIZE },
     { k:'武器', v:equip.weapon ? equip.weapon.short : '战术军刀', up:!!w },
     { k:'单发伤害', v:g.dmg, up:!!w },
@@ -3596,6 +3607,11 @@ function gunArt(name) {
 }
 
 /* 护甲：随机体防护等级给不同厚度/装饰 */
+function helmetArt(name) {
+  return '<path d="M14 34a18 18 0 0 1 36 0v6a3 3 0 0 1-3 3h-30a3 3 0 0 1-3-3z" fill="#334155" stroke="#94a3b8" stroke-width="1.6"/>' +
+    '<rect x="20" y="36" width="24" height="5" rx="2" fill="#0f172a" stroke="#64748b"/>' +
+    '<path d="M32 17v19" stroke="#64748b" stroke-width="1.2" opacity=".7"/>';
+}
 function armorArt(name) {
   var n = name || '';
   if (n.indexOf('外骨骼') >= 0) {
@@ -3673,6 +3689,7 @@ function kindArt(kind) {
     case '安全箱': return safeBoxArt(3);
     case '武器':   return gunArt('');
     case '护甲':   return armorArt('');
+    case '头盔':   return helmetArt('');
     case '背包':   return packArt('');
     case '胸挂':   return rigArt('');
     default:
@@ -3694,6 +3711,7 @@ function itemIcon(it) {
     if (name.indexOf('安全箱') >= 0 || kind === '安全箱' || eq === 'safebox') art = safeBoxArt(it.secure || it.s || 1);
     else if (kind === '武器' || eq === 'weapon') art = gunArt(name);
     else if (kind === '护甲' || eq === 'armor') art = armorArt(name);
+    else if (kind === '头盔' || eq === 'helmet') art = helmetArt(name);
     else if (kind === '背包' || eq === 'pack') art = packArt(name);
     else if (kind === '胸挂' || eq === 'rig') art = rigArt(name);
     else art = kindArt(kind);
@@ -5964,7 +5982,7 @@ function render() {
   ctx.translate(-cam.x + shx, -cam.y + shy);
 
   /* W16.39：地面整体提亮 —— 之前地面和墙壁都接近黑灰蓝，融为一体看不清掩体 */
-  ctx.fillStyle = '#1c2431';
+  ctx.fillStyle = (MAP_PLANS[selectedMap.id] && MAP_PLANS[selectedMap.id].ground) || '#1c2431';
   ctx.fillRect(0, 0, WORLD.w, WORLD.h);
   /* W6：三个城区底色 + 区域名（正式地图的“分块感”） */
   for (var zi = 0; zi < ZONES.length; zi++) {
@@ -6405,7 +6423,7 @@ function miniGeometry() {
 function paintMap(g, baseX, baseY, k, isFull) {
   g.save();
   g.translate(baseX, baseY);
-  g.fillStyle = '#1c2431'; g.fillRect(0, 0, WORLD.w * k, WORLD.h * k);
+  g.fillStyle = (MAP_PLANS[selectedMap.id] && MAP_PLANS[selectedMap.id].ground) || '#1c2431'; g.fillRect(0, 0, WORLD.w * k, WORLD.h * k);
   for (var z = 0; z < ZONES.length; z++) {
     var Zn = ZONES[z];
     g.fillStyle = Zn.tint.replace(/\.[0-9]+\)/, isFull ? '.26)' : '.35)');
@@ -6575,6 +6593,20 @@ var MAP_CONTAINER_SETS = {
   port:       ['weapon','safe','safe','supply',   'safe','weapon','weapon','medical', 'safe','weapon','safe','medical'],
   radar:      ['supply','supply','medical','supply', 'weapon','medical','supply','supply', 'medical','weapon','supply','medical']
 };
+/* S1：每张图独立布点方案 —— 告别「三张图一个样」
+   布点坐标已离线验证避墙；保险箱数量按风险分级：雷达站 3 / 工业区 5 / 港口 8（保险箱扩容）
+   ground：雷达站冷蓝 / 工业区锈紫 / 港口军绿，进图一眼就知道在哪张图 */
+var MAP_PLANS = {
+  radar: { ground:'#1b2b38',
+    pts:[[360,150],[760,900],[1080,1420],[420,1620],[2000,300],[2780,300],[2920,880],[1620,600],[2600,1420],[3020,1650],[1820,1800],[1500,1200]],
+    types:['supply','safe','medical','supply','weapon','medical','supply','safe','supply','medical','weapon','safe'] },
+  industrial: { ground:'#2b2431',
+    pts:[[360,150],[760,900],[1080,1420],[420,1620],[2000,300],[2780,300],[2920,880],[1620,600],[2600,1420],[3020,1650],[1820,1800],[1500,1200],[720,360],[1240,1750]],
+    types:['weapon','supply','medical','supply','safe','weapon','supply','safe','safe','weapon','medical','safe','supply','safe'] },
+  port: { ground:'#20301f',
+    pts:[[360,150],[760,900],[1080,1420],[420,1620],[2000,300],[2780,300],[2920,880],[1620,600],[2600,1420],[3020,1650],[1820,1800],[1500,1200],[700,1700],[2150,1150],[420,1000],[1600,300]],
+    types:['safe','weapon','safe','supply','safe','weapon','safe','medical','safe','weapon','safe','medical','safe','supply','weapon','safe'] }
+};
 var MAPS = [
   /* W16.22：顺序即等级门槛顺序——低风险 → 中风险 → 超高风险 */
   { id:'radar', name:'山地雷达站', minLv:1, gearMax:7000, unlocked:true, size:'3200 × 2000',
@@ -6600,13 +6632,10 @@ function loadMap(map) {
   ZONES = MAP_ZONE_SETS[map.id];
   EXTRACTION_POINTS = MAP_EXTRACT_SETS[map.id];
   AI_DISTRIBUTION = map.aiDist;
-  var types = MAP_CONTAINER_SETS[map.id];
-  /* 容器坐标沿用已避开墙体的布点，按地图换类型组合 */
-  var coords = [
-    [360,150],[760,900],[1080,1420],[420,1620],
-    [2000,300],[2780,300],[2920,880],[1620,600],
-    [2600,1420],[3020,1650],[1820,1800],[1500,1200]
-  ];
+  /* S1：每图独立布点与类型组合（容器数量 / 保险箱数 / 配色都不同） */
+  var plan = MAP_PLANS[map.id];
+  var types = plan.types;
+  var coords = plan.pts;
   containers = coords.map(function(c, i) { return makeContainer(c[0], c[1], types[i]); });
 }
 function inMenu() { return document.body.classList.contains('in-menu'); }
@@ -7566,10 +7595,10 @@ function lbClose() {
    5. 品质体系：所有装备统一六档品质 白/绿/蓝/紫/金/红
    开发时按 1→2→3→4→5 顺序逐条落地，完成后将各条 <i>计划中</i> 改为上线标注 */
 var S1_ROADMAP = [
-  { id: 1, name: '地图差异化',   status: 'plan' },
-  { id: 2, name: '保险箱扩容',   status: 'plan' },
+  { id: 1, name: '地图差异化',   status: 'partial' },
+  { id: 2, name: '保险箱扩容',   status: 'done' },
   { id: 3, name: '房卡房间',     status: 'plan' },
-  { id: 4, name: '头盔',         status: 'plan' },
+  { id: 4, name: '头盔',         status: 'done' },
   { id: 5, name: '六品质体系',   status: 'plan' }
 ];
 var S1_LAUNCH = '2026-11-30';   // 上线日期（周一）
@@ -11157,6 +11186,11 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.2', t:'2026年11月24日 23:40', items:[
+    { k:'新增', d:'地图差异化首版：三张图独立布点、独立地面配色（雷达站冷蓝 / 工业区锈紫 / 港口军绿），进图一眼认出在哪' },
+    { k:'新增', d:'保险箱扩容：地图里的加密保险箱按风险分级——山地雷达站 3 个、废弃工业区 5 个、港口仓储区 8 个' },
+    { k:'新增', d:'全新装备「头盔」六档品质：制式(白)/战术(绿)/复合防弹(蓝)/军用钛合金(紫)/特勤夜视(金)/原型动力(红)，按 60% 折算叠加护甲，商店与地图都能获得' }
+  ]},
   { v:'W17.1', t:'2026年11月24日 20:05', items:[
     { k:'调整', d:'安全箱默认就是 2 格——取消「1 格升 2 格」的设定，所有玩家（含旧存档的 1 格箱）一律保底 2 格' },
     { k:'新增', d:'安全箱改为商店购买：4 格安全箱 $1500、6 格安全箱 $10005、9 格安全箱 $40005，买完自动装备，旧箱自动放回仓库' },
