@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.2 2026-11-24 23:40';
+  var BUILD = 'W17.3 2026-11-25 00:35';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1707,7 +1707,7 @@
     <h2 id="s1-title">S1 赛季 · 起源</h2>
     <div class="s1-when">⏰ 11 月 30 日（周一）上线 · 开发进行中</div>
     <ul class="s1-list">
-      <li><b>🗺️ 地图焕新<i>首版已上线</i></b><span>每张地图独一无二——布局、地貌、建筑各不相同，告别一模一样</span></li>
+      <li><b>🗺️ 地图焕新<i>已上线</i></b><span>每张地图独一无二——布局、地貌、建筑各不相同，告别一模一样</span></li>
       <li><b>🧰 保险箱扩容<i>已上线</i></b><span>保险箱数量大幅增加，搜刮更有惊喜</span></li>
       <li><b>🗝️ 房卡房间<i>计划中</i></b><span>地图角落藏着需要刷卡的加密房间——房卡既能在地图里摸到，也能在商店购买</span></li>
       <li><b>🪖 全新装备：头盔<i>已上线</i></b><span>头部防护正式登场，防护体系再添一环</span></li>
@@ -6502,6 +6502,8 @@ function mapOpen() { return mapOverlay.classList.contains('open'); }
 function openMap() {
   if (inMenu() || player.dead || runEnded) return;
   mapOverlay.classList.add('open');
+  var mt = document.getElementById('map-title');
+  if (mt) mt.textContent = '战术地图 · ' + selectedMap.name;   /* W17.3：标题跟随当前地图 */
   drawFullMap();
   document.getElementById('map-close').focus({ preventScroll: true });
 }
@@ -6598,15 +6600,51 @@ var MAP_CONTAINER_SETS = {
    ground：雷达站冷蓝 / 工业区锈紫 / 港口军绿，进图一眼就知道在哪张图 */
 var MAP_PLANS = {
   radar: { ground:'#1b2b38',
-    pts:[[360,150],[760,900],[1080,1420],[420,1620],[2000,300],[2780,300],[2920,880],[1620,600],[2600,1420],[3020,1650],[1820,1800],[1500,1200]],
+    pts:[[360,150],[760,855],[1080,1420],[420,1620],[2000,315],[2780,300],[2920,880],[1620,600],[2655,1420],[3029,1655],[1820,1800],[1455,1200]],
     types:['supply','safe','medical','supply','weapon','medical','supply','safe','supply','medical','weapon','safe'] },
   industrial: { ground:'#2b2431',
-    pts:[[360,150],[760,900],[1080,1420],[420,1620],[2000,300],[2780,300],[2920,880],[1620,600],[2600,1420],[3020,1650],[1820,1800],[1500,1200],[720,360],[1240,1750]],
+    pts:[[360,150],[760,855],[1080,1420],[420,1620],[2000,315],[2780,300],[2920,880],[1620,600],[2655,1420],[3029,1655],[1820,1800],[1455,1200],[715,369],[1240,1750]],
     types:['weapon','supply','medical','supply','safe','weapon','supply','safe','safe','weapon','medical','safe','supply','safe'] },
   port: { ground:'#20301f',
-    pts:[[360,150],[760,900],[1080,1420],[420,1620],[2000,300],[2780,300],[2920,880],[1620,600],[2600,1420],[3020,1650],[1820,1800],[1500,1200],[700,1700],[2150,1150],[420,1000],[1600,300]],
+    pts:[[360,150],[760,855],[1080,1420],[420,1620],[2000,315],[2780,300],[2920,880],[1620,600],[2655,1420],[3029,1655],[1820,1800],[1455,1200],[700,1700],[2150,1150],[430,1000],[1600,300]],
     types:['safe','weapon','safe','supply','safe','weapon','safe','medical','safe','weapon','safe','medical','safe','supply','weapon','safe'] }
 };
+/* S1 W17.3：三张图布局真正分家 ——
+   雷达站 = 原版布局；工业区 = 左右镜像；港口 = 旋转 180°。
+   各图再拆掉几处不同掩体、盖上自己的专属建筑（坐标离线验证：离墙≥55 / 离物资点≥85 / 离撤离点≥150）。
+   撤离点、分区、物资布点跟随同样变换，保证整张图是「另一张图」而不是换色。 */
+var MAP_WALL_SETS = {};
+(function () {
+  var KIND = { radar:'I', industrial:'MX', port:'R180' };
+  var REMOVE = { radar:['1180,180','1600,1620'], industrial:['1440,700','300,1700'], port:['1180,180','1340,1560','900,1180'] };
+  var EXTRA = {
+    radar:      [[430,430,220,50],[1446,1430,180,50],[2562,580,220,50]],
+    industrial: [[2562,430,220,50],[330,1380,120,120],[1546,330,50,180],[2512,1380,50,220]],
+    port:       [[430,280,220,50],[1796,1380,50,220],[2562,1530,220,50],[430,1380,220,50],[1596,480,180,50]]
+  };
+  function txRect(r, k) {
+    if (k === 'MX')   return { x: WORLD.w - r.x - r.w, y: r.y, w: r.w, h: r.h };
+    if (k === 'R180') return { x: WORLD.w - r.x - r.w, y: WORLD.h - r.y - r.h, w: r.w, h: r.h };
+    return { x: r.x, y: r.y, w: r.w, h: r.h };
+  }
+  function txPt(p, k) {
+    if (k === 'MX')   return [WORLD.w - p[0], p[1]];
+    if (k === 'R180') return [WORLD.w - p[0], WORLD.h - p[1]];
+    return [p[0], p[1]];
+  }
+  for (var id in KIND) {
+    var k = KIND[id], list = [];
+    walls.forEach(function (r) {
+      if (REMOVE[id].indexOf(r.x + ',' + r.y) >= 0) return;
+      list.push(txRect(r, k));
+    });
+    EXTRA[id].forEach(function (e) { list.push({ x: e[0], y: e[1], w: e[2], h: e[3] }); });
+    MAP_WALL_SETS[id] = list;
+    MAP_PLANS[id].pts = MAP_PLANS[id].pts.map(function (p) { return txPt(p, k); });
+    MAP_EXTRACT_SETS[id].forEach(function (e) { var p = txPt([e.x, e.y], k); e.x = p[0]; e.y = p[1]; });
+    MAP_ZONE_SETS[id].forEach(function (z) { var r = txRect(z, k); z.x = r.x; z.y = r.y; });
+  }
+})();
 var MAPS = [
   /* W16.22：顺序即等级门槛顺序——低风险 → 中风险 → 超高风险 */
   { id:'radar', name:'山地雷达站', minLv:1, gearMax:7000, unlocked:true, size:'3200 × 2000',
@@ -6629,6 +6667,7 @@ var MAPS = [
 var selectedMap = MAPS.filter(function(m) { return m.id === savedMapId; })[0] || MAPS[0];
 function loadMap(map) {
   selectedMap = map;
+  walls = MAP_WALL_SETS[map.id] || walls;   /* S1 W17.3：每图独立墙体布局 */
   ZONES = MAP_ZONE_SETS[map.id];
   EXTRACTION_POINTS = MAP_EXTRACT_SETS[map.id];
   AI_DISTRIBUTION = map.aiDist;
@@ -6649,7 +6688,7 @@ function renderMapCard() {
   document.getElementById('map-name').textContent = selectedMap.name;
   document.getElementById('map-desc').textContent = selectedMap.desc;
   document.getElementById('map-tags').innerHTML =
-    '<i>撤离点 ×3</i><i>容器 ×12</i><i>' + selectedMap.lootLabel + '</i>' +
+    '<i>撤离点 ×3</i><i>容器 ×' + (MAP_PLANS[selectedMap.id] ? MAP_PLANS[selectedMap.id].pts.length : 12) + '</i><i>' + selectedMap.lootLabel + '</i>' +
     '<i style="color:#7dd3fc">装备 ' + gearLimitText(selectedMap) + '</i>';
   var hint = document.getElementById('map-level-hint');
   if (hint) hint.textContent = 'Lv.' + need + ' 解锁 · ' + selectedMap.risk;
@@ -7595,7 +7634,7 @@ function lbClose() {
    5. 品质体系：所有装备统一六档品质 白/绿/蓝/紫/金/红
    开发时按 1→2→3→4→5 顺序逐条落地，完成后将各条 <i>计划中</i> 改为上线标注 */
 var S1_ROADMAP = [
-  { id: 1, name: '地图差异化',   status: 'partial' },
+  { id: 1, name: '地图差异化',   status: 'done' },
   { id: 2, name: '保险箱扩容',   status: 'done' },
   { id: 3, name: '房卡房间',     status: 'plan' },
   { id: 4, name: '头盔',         status: 'done' },
@@ -11186,6 +11225,10 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.3', t:'2026年11月25日 00:35', items:[
+    { k:'新增', d:'三张图布局真正分家：雷达站原版 / 工业区左右镜像 / 港口旋转 180°，各有专属建筑与拆除的掩体，撤离点与分区随之移位' },
+    { k:'修复', d:'战术地图标题改为跟随当前地图名；几处贴墙物资点微调到可交互位置' }
+  ]},
   { v:'W17.2', t:'2026年11月24日 23:40', items:[
     { k:'新增', d:'地图差异化首版：三张图独立布点、独立地面配色（雷达站冷蓝 / 工业区锈紫 / 港口军绿），进图一眼认出在哪' },
     { k:'新增', d:'保险箱扩容：地图里的加密保险箱按风险分级——山地雷达站 3 个、废弃工业区 5 个、港口仓储区 8 个' },
