@@ -1162,6 +1162,13 @@
   #credits-panel .credits-tags i { font-style:normal; font-size:11px; color:#9db7cc;
     border:1px solid #2c405a; border-radius:20px; padding:3px 10px; }
   #credits-panel .credits-desc { font-size:14px; line-height:1.9; color:#b9cadb; margin:14px 2px 16px; }
+  #credits-panel .credits-contact { display:flex; gap:10px; margin-bottom:14px; }
+  #credits-panel .credits-contact button { flex:1 1 0; display:flex; flex-direction:column; align-items:center;
+    gap:3px; min-height:64px; justify-content:center; border-radius:9px; cursor:pointer;
+    background:#111c2c; border:1px solid #334155; color:#cbd5e1; font-size:13px; font-weight:700; }
+  #credits-panel .credits-contact button b { font-size:15px; color:#f5e6b8; letter-spacing:.04em; }
+  #credits-panel .credits-contact button i { font-style:normal; font-size:10px; color:#64748b; font-weight:400; }
+  #credits-panel .credits-contact button:active { transform:scale(.97); border-color:#e2c87f; }
   #credits-panel .credits-foot { display:flex; gap:10px; }
   #credits-panel .credits-foot button { flex:1 1 auto; min-height:52px; border-radius:9px; font-size:15px;
     letter-spacing:.1em; cursor:pointer; border:1px solid #334155; }
@@ -1636,6 +1643,10 @@
       </div>
     </div>
     <p class="credits-desc">红狼是《三角形突围》的原创人员与核心开发。从搜刮撤离的玩法规则，到每张地图的枪林弹雨，再到双人组队、救援与财富榜的联机系统——这款游戏的每一个细节，都出自他的设计与打磨。</p>
+    <div class="credits-contact">
+      <button id="credits-wx" type="button">💬 微信<b>19035145656</b><i>点击复制</i></button>
+      <button id="credits-tel" type="button">📱 电话<b>19035145656</b><i>点击复制</i></button>
+    </div>
     <div class="credits-foot">
       <button id="credits-mail" type="button">✉️ 联系我们</button>
       <button id="credits-ok" type="button">关 闭</button>
@@ -7416,7 +7427,7 @@ function lbClose() {
 })();
 /* W16.92 创作人员面板 —— 红狼展示 + 联系我们（mailto 拉起邮箱 App） */
 (function initCredits() {
-  var CREATOR_EMAIL = '';   // 红狼的联系邮箱（拿到后填这里，如 'xxx@163.com'）
+  var CREATOR_EMAIL = '19035145656@163.com';   // 红狼的联系邮箱（与微信/手机号同号）
   var ov = document.getElementById('credits-overlay');
   if (!ov) return;
   function openC() { ov.classList.add('show'); }
@@ -7430,11 +7441,29 @@ function lbClose() {
   ov.addEventListener('click', function(e) { if (e.target === ov) closeC(); });
   var bm = document.getElementById('credits-mail');
   if (bm) bm.addEventListener('click', function() {
-    if (!CREATOR_EMAIL) { showToast('联系邮箱配置中，敬请期待'); return; }
     location.href = 'mailto:' + CREATOR_EMAIL +
       '?subject=' + encodeURIComponent('来自《三角形突围》玩家的消息') +
       '&body=' + encodeURIComponent('你好红狼：\n\n（在这里写下你想说的话）\n\n—— 来自三角形突围的一名干员');
   });
+  /* 微信 / 电话：点击复制号码（兼容 clipboard API 与旧浏览器） */
+  function copyContact(val, tip) {
+    function done() { showToast(tip); }
+    function fail() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = val; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta); done();
+      } catch (e) { showToast('复制失败，号码：' + val); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(val).then(done, fail);
+    } else fail();
+  }
+  var bw = document.getElementById('credits-wx');
+  if (bw) bw.addEventListener('click', function() { copyContact('19035145656', '微信号已复制：19035145656'); });
+  var bt = document.getElementById('credits-tel');
+  if (bt) bt.addEventListener('click', function() { copyContact('19035145656', '手机号已复制：19035145656'); });
 })();
 
 /* ============ W10：好友 · 私聊（Supabase 表 + Realtime 推送） ============ */
