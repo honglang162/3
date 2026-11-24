@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.0 2026-11-24 19:25';
+  var BUILD = 'W17.1 2026-11-24 20:05';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1495,7 +1495,7 @@
         <div id="container-grid" class="slot-grid"></div>
       </section>
       <section aria-label="背包物品">
-        <!-- W6.3：安全箱移到背包上方，标题写明“安全箱”，固定 2 格 -->
+        <!-- S1：安全箱默认 2 格，商店可购买 4/6/9 格 -->
         <div class="panel-heading safebox-heading"><h2>安全箱 <span id="safebox-cap" class="panel-meta">2 格</span></h2><span class="panel-meta">阵亡不掉落 · 把物品拖进来即可保存</span></div>
         <div id="safebox-grid" class="slot-grid safebox-grid"></div>
         <div class="panel-heading" style="margin-top:10px"><h2>战术背包 <span id="bag-count" class="panel-meta">0 / 24</span></h2><span id="bag-value" class="panel-meta">$0</span></div>
@@ -1742,7 +1742,7 @@
     <div id="panel-loadout" class="stash-panel active" role="tabpanel" aria-labelledby="tab-loadout">
       <div class="loadout">
         <div>
-          <p class="panel-sub">点击装备格可卸下（放回仓库）· 安全箱固定 2 格，阵亡不掉 · 胸挂格子和背包合并计算 · 装备价值按「武器＋护甲＋背包＋胸挂」计算，开局时检测</p>
+          <p class="panel-sub">点击装备格可卸下（放回仓库）· 安全箱默认 2 格，商店可购买 4 / 6 / 9 格 · 阵亡不掉 · 胸挂格子和背包合并计算 · 装备价值按「武器＋护甲＋背包＋胸挂」计算，开局时检测</p>
           <div id="equip-slots" class="loadout-slots"></div>
         </div>
         <div>
@@ -2207,12 +2207,14 @@ var ITEM_DEFS = [
   { name:'绝密战术核芯', short:'核芯', rarity:'mythic', value:9600, kind:'绝密科技', sources:['safe','ai'] },
   { name:'军团长黄金权杖', short:'权杖', rarity:'mythic', value:8200, kind:'收藏品', sources:['safe','ai'] },
   { name:'原型动力甲蓝图', short:'动力甲图', rarity:'mythic', value:7400, kind:'绝密图纸', sources:['safe','ai'] },
-  /* W6：安全箱（5 个等级，死亡不掉、不能卖出） */
+  /* S1：安全箱体系 —— 默认 2 格（免费自带），商店可购买 4 / 6 / 9 格（死亡不掉、不能卖出）
+     价格由 value × BUY_RATE(1.35) 反算：1111→$1500，7411→$10005，29633→$40005 */
   { name:'轻型安全箱', short:'安全箱', rarity:'common', value:0, kind:'安全箱', equip:'safebox', secure:1, sources:[], noSell:true },
   { name:'战术安全箱', short:'安全箱', rarity:'uncommon', value:0, kind:'安全箱', equip:'safebox', secure:2, sources:[], noSell:true },
   { name:'加固安全箱', short:'安全箱', rarity:'rare', value:0, kind:'安全箱', equip:'safebox', secure:3, sources:[], noSell:true },
-  { name:'军用安全箱', short:'安全箱', rarity:'epic', value:0, kind:'安全箱', equip:'safebox', secure:4, sources:[], noSell:true },
-  { name:'俄商安全箱', short:'安全箱', rarity:'legendary', value:0, kind:'安全箱', equip:'safebox', secure:6, sources:[], noSell:true },
+  { name:'军用安全箱', short:'安全箱', rarity:'epic', value:1111, kind:'安全箱', equip:'safebox', secure:4, sources:[], noSell:true, shopOnly:true },
+  { name:'俄商安全箱', short:'安全箱', rarity:'legendary', value:7411, kind:'安全箱', equip:'safebox', secure:6, sources:[], noSell:true, shopOnly:true },
+  { name:'原型安全箱', short:'安全箱', rarity:'mythic', value:29633, kind:'安全箱', equip:'safebox', secure:9, sources:[], noSell:true, shopOnly:true },
   /* —— 装备类：可购买、穿戴、带进战局 —— */
   { name:'制式短枪', short:'短枪', rarity:'common', value:300, kind:'武器', equip:'weapon', sources:['weapon','ai'] },
   { name:'加长冲锋枪', short:'冲锋', rarity:'uncommon', value:1100, kind:'武器', equip:'weapon', sources:['weapon','ai'] },
@@ -2956,8 +2958,23 @@ function gunStats() {
 }
 /* W6：把散布换算成 0~100 的“精度”读数（手枪基准约 25，精确步枪约 85） */
 function precisionOf(g) { return Math.max(0, Math.min(100, Math.round((0.08 - (g.spread || 0.06)) / 0.065 * 100))); }
-/* W6：安全箱容量（当前装备的安全箱提供几个保底格） */
-function secureSlots() { return SECURE_SLOTS.length; }   // 安全箱 2 格默认全解锁
+/* S1：安全箱保底格数 —— 默认 2 格；装上更大的安全箱（4/6/9 格）后随之提升 */
+function secureSlots() {
+  var n = equip.safebox ? (equip.safebox.secure || 0) : 0;
+  return Math.max(2, n);          // 不装 / 旧版 1 格箱，一律保底 2 格（没有「一格」这一说）
+}
+/* S1：格位数组与容量对齐 —— 换箱后超出容量的物品自动退回背包/仓库，不丢失 */
+function syncSecureSlots() {
+  var n = secureSlots();
+  for (var i = SECURE_SLOTS.length - 1; i >= n; i--) {
+    if (!SECURE_SLOTS[i]) continue;
+    var empty = firstEmpty(bag);
+    if (empty >= 0) bag[empty] = SECURE_SLOTS[i]; else stash.push(SECURE_SLOTS[i]);
+    SECURE_SLOTS[i] = null;
+  }
+  SECURE_SLOTS.length = n;
+  while (SECURE_SLOTS.length < n) SECURE_SLOTS.push(null);
+}
 function bagValue() { return bag.reduce(function(sum, it) { return sum + (it ? it.value : 0); }, 0); }
 function firstEquipIt() {
   if (equip.med) return equip.med;
@@ -3002,7 +3019,8 @@ function applySaveData(data) {
     pack:deItem(data.equip && data.equip.pack), rig:deItem(data.equip && data.equip.rig),
     med:deItem(data.equip && data.equip.med), safebox:deItem(data.equip && data.equip.safebox) };
   var ss = (data.secure && data.secure.length) ? data.secure : (data.secure ? [data.secure] : []);
-  SECURE_SLOTS = [deItem(ss[0]), deItem(ss[1] || null)];
+  SECURE_SLOTS = ss.map(function(x) { return deItem(x); });
+  syncSecureSlots();
   var st = data.stats || {};
   totalRuns = st.runs || 0; totalExtracts = st.extracts || 0; totalKills = st.kills || 0;
   /* W16.23：等级只升不降（云端/他机存档经验更少时不回退） */
@@ -3023,7 +3041,8 @@ function loadGame() {
     pack:deItem(data.equip && data.equip.pack), rig:deItem(data.equip && data.equip.rig),
     med:deItem(data.equip && data.equip.med), safebox:deItem(data.equip && data.equip.safebox) };
   var savedSafe = (data.secure && data.secure.length) ? data.secure : (data.secure ? [data.secure] : []);
-  SECURE_SLOTS = [deItem(savedSafe[0]), deItem(savedSafe[1] || null)];
+  SECURE_SLOTS = savedSafe.map(function(x) { return deItem(x); });
+  syncSecureSlots();
   var st = data.stats || {};
   totalRuns = st.runs || 0; totalExtracts = st.extracts || 0; totalKills = st.kills || 0;
   playerXp = Math.max(0, st.xp || 0);
@@ -3037,15 +3056,16 @@ function newSave() {
   playerXp = 0; savedMapId = 'radar';
   stash = []; equip = { weapon:null, armor:null, pack:null, rig:null, med:null, safebox:null }; RUN_BAG = []; SECURE_SLOTS = [null, null];
   // 初始物资：一把短枪 + 轻甲 + 挎包 + 两卷绷带 + 一把备用短枪（可在仓库卖掉换钱）
-  ['制式短枪','制式短枪','轻型防弹背心','战术挎包','轻型胸挂','消毒绷带','消毒绷带','轻型安全箱'].forEach(function(name) {
+  ['制式短枪','制式短枪','轻型防弹背心','战术挎包','轻型胸挂','消毒绷带','消毒绷带','战术安全箱'].forEach(function(name) {
     var def = ITEM_DEFS.filter(function(d) { return d.name === name; })[0];
     if (def) stash.push(createItem(def));
   });
   autoEquipBest();
-  if (!equip.safebox) {                 // W6：新手默认带 1 格保底
+  if (!equip.safebox) {                 // S1：新手默认带 2 格安全箱（不再从 1 格起步）
     var sb = stash.filter(function(it) { return it.equip === 'safebox'; })[0];
     if (sb) { stash.splice(stash.indexOf(sb), 1); equip.safebox = sb; }
   }
+  syncSecureSlots();
   saveGame();
 }
 function autoEquipBest() {
@@ -3081,7 +3101,7 @@ function equipItem(it) {
   var idx = stash.indexOf(it); if (idx >= 0) stash.splice(idx, 1);
   equip[it.equip] = it;
   if (old) stash.push(old);
-  if (it.equip === 'safebox') lockSecureSlots();   // W6.3：换箱后多余物品退回背包
+  if (it.equip === 'safebox') syncSecureSlots();   // S1：换箱后格位与容量对齐（多余物品退回背包）
   syncBagSize(true); applyLoadoutOnRun(true);
   saveGame(); renderStash(); renderLoadout(); renderLoot();
   return true;
@@ -3169,7 +3189,7 @@ function renderLoadout() {
     { k:'单发伤害', v:g.dmg, up:!!w },
     { k:'弹匣 / 射速', v:g.mag + ' / ' + g.fireGap.toFixed(2) + 's', up:!!w },
     { k:'精度', v:precisionOf(g) + ' · 射程 ' + g.range + 'm', up:!!w },
-    { k:'安全箱', v:secureSlots() + ' 格保底', up:secureSlots() > 0 },
+    { k:'安全箱', v:secureSlots() + ' 格保底', up:false },
     { k:'装备价值', v:'$' + gnum(gearValue()), up:!gearGateFail(selectedMap) }
   ];
   document.getElementById('loadout-stats').innerHTML = stats.map(function(s) {
@@ -3194,9 +3214,9 @@ function renderStash() {
   document.getElementById('stash-money').textContent = '$' + Math.round(money);
   var restockDef = ITEM_DEFS.filter(function(d) { return d.name === '野战医疗包'; })[0];
   document.getElementById('quick-restock').textContent = '快速补给（医疗包 ×2，$' + (buyPrice(restockDef) * 2) + '）';
-  var sbIdx = safeboxStageIndex(), sbNext = SAFEBOX_STAGES[sbIdx + 1], sbBtn = document.getElementById('upgrade-safebox');
-  if (sbBtn) sbBtn.textContent = sbNext ? ('升级安全箱 → ' + sbNext.name + '（保底 ' + sbNext.secure + ' 格，$' + sbNext.cost + '）')
-                                        : '安全箱已满级（保底 ' + (SAFEBOX_STAGES[sbIdx].secure) + ' 格）';
+  var sbBtn = document.getElementById('upgrade-safebox');
+  if (sbBtn) sbBtn.textContent = '当前安全箱：' + (equip.safebox ? equip.safebox.name : '标准') +
+    '（保底 ' + secureSlots() + ' 格）· 去商店换更大的';
   document.getElementById('stash-meta').textContent = stash.length + ' 件 · 总价值 $' +
     stash.reduce(function(s, it) { return s + it.value; }, 0);
   var grid = document.getElementById('stash-grid'); grid.innerHTML = '';
@@ -3245,6 +3265,8 @@ function renderShop() {
   var grid = document.getElementById('shop-grid'); grid.innerHTML = '';
   var list = [];
   gearDefs.forEach(function(d) { list.push(d); });
+  /* S1：安全箱上架 —— 4 格 $1500 / 6 格 $10005 / 9 格 $40005（默认 2 格免费自带，不上架） */
+  ITEM_DEFS.filter(function(d) { return d.equip === 'safebox' && d.shopOnly; }).forEach(function(d) { list.push(d); });
   ['野战医疗包','战地急救箱','实验性药剂'].forEach(function(n) {
     list.push(ITEM_DEFS.filter(function(d) { return d.name === n; })[0]);
   });
@@ -3256,7 +3278,7 @@ function renderShop() {
     card.innerHTML = itemIcon(def) +
       '<span class="shop-name"><span class="' + def.rarity + '-text">' + def.name + '</span></span>' +
       '<span class="shop-price">$' + price + '</span>' +
-      '<span class="shop-owned">' + (def.equip ? itemMetaText({ equip:def.equip, armor:def.armor || 0, slotBonus:def.slotBonus || 0, heal:def.heal || 0, rarity:def.rarity }) : def.kind) + '</span>' +
+      '<span class="shop-owned">' + (def.equip ? itemMetaText({ equip:def.equip, secure:def.secure || 0, armor:def.armor || 0, slotBonus:def.slotBonus || 0, heal:def.heal || 0, rarity:def.rarity }) : def.kind) + '</span>' +
       '<span class="shop-owned">已持有 ' + owned + '</span>';
     var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'buy-btn';
     btn.textContent = '购买';
@@ -3266,8 +3288,17 @@ function renderShop() {
       if (money < price) return;
       money -= price;
       var it = createItem(def);
-      stash.push(it); shopBuyCount++;
-      showToast('购买 ' + it.name + '，-' + '$' + price);
+      shopBuyCount++;
+      var msg = '购买 ' + it.name + '，-' + '$' + price;
+      if (it.equip === 'safebox') {
+        /* S1：安全箱买完直接装备，旧箱放回仓库备用 */
+        if (equip.safebox) stash.push(equip.safebox);
+        equip.safebox = it; syncSecureSlots();
+        msg += '（已装备，保底 ' + secureSlots() + ' 格）';
+      } else {
+        stash.push(it);
+      }
+      showToast(msg);
       saveGame(); renderStash(); renderLoadout(); renderShop();
     });
     card.appendChild(btn);
@@ -3321,17 +3352,10 @@ function safeboxStageIndex() {
   for (var i = SAFEBOX_STAGES.length - 1; i >= 0; i--) if (SAFEBOX_STAGES[i].secure <= cur) return i;
   return 0;
 }
+/* S1：安全箱改为商店购买 —— 点击直接跳到商店页挑选 */
 function upgradeSafebox() {
-  var i = safeboxStageIndex(), next = SAFEBOX_STAGES[i + 1];
-  if (!next) { showToast('安全箱已是最高等级'); return; }
-  if (money < next.cost) { showToast('金币不足，还需要 $' + (next.cost - money)); return; }
-  money -= next.cost;
-  var def = ITEM_DEFS.filter(function(d) { return d.equip === 'safebox' && (d.secure || 0) === next.secure; })[0];
-  if (!def) return;
-  if (equip.safebox) stash.push(equip.safebox);
-  equip.safebox = createItem(def);
-  saveGame(); renderStash(); renderLoadout(); refreshStartScreen();
-  showToast('安全箱升级为「' + next.name + '」，保底 ' + next.secure + ' 格');
+  switchTab('shop');
+  showToast('安全箱去商店购买：4 格 $1500 · 6 格 $10005 · 9 格 $40005');
 }
 document.getElementById('upgrade-safebox').addEventListener('click', upgradeSafebox);
 document.getElementById('quick-restock').addEventListener('click', function() {
@@ -4106,7 +4130,7 @@ function moveToSafe(index) {
   var it = bag[index]; if (!it) return;
   if (!secureSlots()) { showToast('没有装备安全箱，先在仓库装一个'); return; }
   var slot = safeFreeSlot();
-  if (slot < 0) { showToast('安全箱只有 2 格且已满，先取出一件'); return; }
+  if (slot < 0) { showToast('安全箱已满（' + secureSlots() + ' 格），先取出一件'); return; }
   SECURE_SLOTS[slot] = it; bag[index] = null;
   SECURE_SLOTS.length = SECURE_SLOTS.length;
   selectedItem = null; showDetail(null); renderLoot(); saveGame();
@@ -11105,6 +11129,11 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.1', t:'2026年11月24日 20:05', items:[
+    { k:'调整', d:'安全箱默认就是 2 格——取消「1 格升 2 格」的设定，所有玩家（含旧存档的 1 格箱）一律保底 2 格' },
+    { k:'新增', d:'安全箱改为商店购买：4 格安全箱 $1500、6 格安全箱 $10005、9 格安全箱 $40005，买完自动装备，旧箱自动放回仓库' },
+    { k:'调整', d:'仓库里的「升级安全箱」按钮改为跳转商店购买，不再走旧升级链' }
+  ]},
   { v:'W17.0', t:'2026年11月24日 19:25', items:[
     { k:'赛季', d:'赛季更名为「S1 赛季 · 起源」，预计 11 月 30 日（周一）上线——点击主界面的赛季名即可查看赛季预告面板' },
     { k:'预告', d:'S1 赛季新内容：地图差异化焕新（每张图独一无二）、保险箱扩容、房卡房间（地图角落的加密房间，房卡地图里能摸到、商店也能买）、全新装备头盔、全装备六大品质体系（白·绿·蓝·紫·金·红）' }
