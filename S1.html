@@ -1897,6 +1897,8 @@ function portraitPanelOpen() {
   var mu = document.getElementById('music-panel');
   var dl = document.getElementById('dl-panel');
   return !!(document.querySelector('#fr-overlay.show') ||
+    document.querySelector('#credits-overlay.show') ||
+    document.querySelector('#s1-overlay.show') ||
     (mu && mu.style.display === 'flex') ||
     (dl && dl.style.display === 'flex'));
 }
@@ -7517,8 +7519,8 @@ function lbClose() {
   var CREATOR_EMAIL = '19035145656@163.com';   // 红狼的联系邮箱（与微信/手机号同号）
   var ov = document.getElementById('credits-overlay');
   if (!ov) return;
-  function openC() { ov.classList.add('show'); }
-  function closeC() { ov.classList.remove('show'); }
+  function openC() { ov.classList.add('show'); if (typeof syncPortraitPanels === 'function') syncPortraitPanels(); }
+  function closeC() { ov.classList.remove('show'); if (typeof syncPortraitPanels === 'function') syncPortraitPanels(); }
   var bo = document.getElementById('credits-open');
   if (bo) bo.addEventListener('click', openC);
   var bc = document.getElementById('credits-close');
@@ -7576,8 +7578,8 @@ var S1_LAUNCH = '2026-11-30';   // 上线日期（周一）
 (function initS1() {
   var ov = document.getElementById('s1-overlay');
   if (!ov) return;
-  function openS1() { ov.classList.add('show'); }
-  function closeS1() { ov.classList.remove('show'); }
+  function openS1() { ov.classList.add('show'); if (typeof syncPortraitPanels === 'function') syncPortraitPanels(); }
+  function closeS1() { ov.classList.remove('show'); if (typeof syncPortraitPanels === 'function') syncPortraitPanels(); }
   var bs = document.querySelector('.brand-season');
   if (bs) {
     bs.style.cursor = 'pointer';

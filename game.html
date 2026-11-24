@@ -1857,6 +1857,7 @@ function portraitPanelOpen() {
   var mu = document.getElementById('music-panel');
   var dl = document.getElementById('dl-panel');
   return !!(document.querySelector('#fr-overlay.show') ||
+    document.querySelector('#credits-overlay.show') ||
     (mu && mu.style.display === 'flex') ||
     (dl && dl.style.display === 'flex'));
 }
@@ -7453,8 +7454,8 @@ function lbClose() {
   var CREATOR_EMAIL = '19035145656@163.com';   // 红狼的联系邮箱（与微信/手机号同号）
   var ov = document.getElementById('credits-overlay');
   if (!ov) return;
-  function openC() { ov.classList.add('show'); }
-  function closeC() { ov.classList.remove('show'); }
+  function openC() { ov.classList.add('show'); if (typeof syncPortraitPanels === 'function') syncPortraitPanels(); }
+  function closeC() { ov.classList.remove('show'); if (typeof syncPortraitPanels === 'function') syncPortraitPanels(); }
   var bo = document.getElementById('credits-open');
   if (bo) bo.addEventListener('click', openC);
   var bc = document.getElementById('credits-close');
