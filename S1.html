@@ -12,14 +12,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="撤离协议">
+<meta name="apple-mobile-web-app-title" content="绝境逃生">
 <meta name="theme-color" content="#060b14">
-<title>撤离协议 · 交战 · 搜索 · 撤离</title>
+<title>绝境逃生 · 交战 · 搜索 · 撤离</title>
 <!-- W16.6：自动更新哨兵 —— 每次打开都自查线上版本，发现更新就带随机参数强刷
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.11 2026-11-26 01:10';
+  var BUILD = 'W17.12 2026-11-26 01:35';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1620,8 +1620,8 @@
   <div id="intro-inner">
     <video id="intro-video" src="intro.mp4" preload="auto" playsinline webkit-playsinline></video>
     <div id="intro-launch">
-      <div class="intro-logo">撤离协议</div>
-      <div class="intro-sub">EXTRACTION PROTOCOL</div>
+      <div class="intro-logo">绝境逃生</div>
+      <div class="intro-sub">DESPERATE ESCAPE</div>
       <button id="intro-start" type="button">开 始 游 戏</button>
     </div>
     <button id="intro-skip" type="button">跳过 ›</button>
@@ -1632,9 +1632,9 @@
   <div class="start-wrap">
     <div class="brand-row">
       <div class="brand">
-        <h1 id="brand-name">撤离协议</h1>
+        <h1 id="brand-name">绝境逃生</h1>
         <h2 class="brand-season">S1 赛季 · 起源 <i class="season-tag">测试服</i></h2>
-        <p class="brand-sub">Extraction Protocol · 交战 · 搜索 · 撤离</p>
+        <p class="brand-sub">Desperate Escape · 交战 · 搜索 · 撤离</p>
         <p id="game-version" style="margin:4px 0 0;color:#fbbf24;font-size:11px;font-family:ui-monospace,monospace;">版本加载中…</p>
         <div class="brand-btns">
           <button id="set-open-big" class="lb-big-btn cfg" type="button">⚙️ 设置<small>画质 · 操作 · 布局</small></button>
@@ -7950,8 +7950,8 @@ function lbClose() {
   var bm = document.getElementById('credits-mail');
   if (bm) bm.addEventListener('click', function() {
     location.href = 'mailto:' + CREATOR_EMAIL +
-      '?subject=' + encodeURIComponent('来自《撤离协议》玩家的消息') +
-      '&body=' + encodeURIComponent('你好红狼：\n\n（在这里写下你想说的话）\n\n—— 来自撤离协议的一名干员');
+      '?subject=' + encodeURIComponent('来自《绝境逃生》玩家的消息') +
+      '&body=' + encodeURIComponent('你好红狼：\n\n（在这里写下你想说的话）\n\n—— 来自绝境逃生的一名干员');
   });
   /* 微信 / 电话：点击复制号码（兼容 clipboard API 与旧浏览器） */
   function copyContact(val, tip) {
@@ -11616,6 +11616,10 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.12', t:'2026年11月26日 01:35', items:[
+    { k:'品牌', d:'游戏定名《绝境逃生》（英文 Desperate Escape）——定案，不再改了' },
+    { k:'修复', d:'修复「更新日记」显示 [object Object] 的问题——新日志条目带【分类】标签正常显示，历史版本一次性修复' }
+  ]},
   { v:'W17.11', t:'2026年11月26日 01:10', items:[
     { k:'品牌', d:'游戏更名《撤离协议》（英文 Extraction Protocol）——原来的「三角形突围」太像三角洲行动+暗区突围的组合，现在是有自己名字的游戏了' },
     { k:'界面', d:'主界面整体美化：暗色渐变底 + 战术网格背景、标题渐变字、功能按钮卡片化（悬停浮起）、快速开始按钮换绿色高亮、卡片圆角阴影统一' }
@@ -11864,7 +11868,16 @@ var CHANGELOG = [
       head.appendChild(ver); head.appendChild(tm);
       var ul = document.createElement('ul'); ul.className = 'cl-items';
       e.items.forEach(function(txt) {
-        var li = document.createElement('li'); li.textContent = txt; ul.appendChild(li);
+        var li = document.createElement('li');
+        var o = (txt && typeof txt === 'object') ? txt : { k:'', d:String(txt) };
+        if (o.k) {
+          var tag = document.createElement('b');
+          tag.textContent = '【' + o.k + '】';
+          tag.style.color = '#67e8f9';
+          li.appendChild(tag);
+        }
+        li.appendChild(document.createTextNode(o.d));
+        ul.appendChild(li);
       });
       item.appendChild(head); item.appendChild(ul);
       list.appendChild(item);
