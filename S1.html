@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.4 2026-11-25 13:05';
+  var BUILD = 'W17.7 2026-11-25 18:55';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1707,7 +1707,7 @@
     <ul class="s1-list">
       <li><b>🗺️ 地图焕新<i>已上线</i></b><span>每张地图独一无二——布局、地貌、建筑各不相同，告别一模一样</span></li>
       <li><b>🧰 保险箱扩容<i>已上线</i></b><span>保险箱数量大幅增加，搜刮更有惊喜</span></li>
-      <li><b>🗝️ 房卡房间<i>计划中</i></b><span>地图角落藏着需要刷卡的加密房间——房卡既能在地图里摸到，也能在商店购买</span></li>
+      <li><b>🗝️ 房卡房间<i>已上线</i></b><span>地图角落藏着需要刷卡的加密房间——房卡既能在地图里摸到，也能在商店购买</span></li>
       <li><b>🪖 全新装备：头盔<i>已上线</i></b><span>头部防护正式登场，防护体系再添一环</span></li>
       <li><b>🎨 六大品质体系<i>计划中</i></b><span>每种装备都有六档品质：白 · 绿 · 蓝 · 紫 · 金 · 红</span></li>
     </ul>
@@ -2239,6 +2239,9 @@ var ITEM_DEFS = [
   { name:'军用安全箱', short:'安全箱', rarity:'epic', value:1111, kind:'安全箱', equip:'safebox', secure:4, sources:[], noSell:true, shopOnly:true },
   { name:'俄商安全箱', short:'安全箱', rarity:'legendary', value:7411, kind:'安全箱', equip:'safebox', secure:6, sources:[], noSell:true, shopOnly:true },
   { name:'原型安全箱', short:'安全箱', rarity:'mythic', value:29633, kind:'安全箱', equip:'safebox', secure:9, sources:[], noSell:true, shopOnly:true },
+  /* S1 W17.7：加密房卡 —— 开地图角落的加密房间；地图里搜刮有机会摸到，商店也有售。
+     sources 留空 = 不进普通随机池，改由 generateLoot 按容器类型单独掷概率（不稀释正常爆率） */
+  { name:'加密房卡', short:'房卡', rarity:'epic', value:1500, kind:'房卡', sources:[] },
   /* —— 装备类：可购买、穿戴、带进战局 —— */
   { name:'制式短枪', short:'短枪', rarity:'common', value:300, kind:'武器', equip:'weapon', sources:['weapon','ai'] },
   { name:'加长冲锋枪', short:'冲锋', rarity:'uncommon', value:1100, kind:'武器', equip:'weapon', sources:['weapon','ai'] },
@@ -2274,6 +2277,7 @@ var CONTAINER_TYPES = {   /* W16.85：全图爆率上调 —— 每箱物品数�
 };
 /* 东洲之星：对标“非洲之星”，只在加密保险箱里以极低概率出货 */
 var STAR_ITEM = ITEM_DEFS.filter(function(d) { return d.name === '东洲之星'; })[0];
+var KEYCARD_DEF = ITEM_DEFS.filter(function(d) { return d.name === '加密房卡'; })[0];   /* S1 W17.7 */
 /* ============ W16.22：等级系统（等级门槛绑定地图） ============
    等级 1~60，靠每局结算经验升级。三张地图对应三个等级门槛：
      山地雷达站（低风险）Lv.1 → 废弃工业区（中风险）Lv.20 → 港口仓储区（超高风险）Lv.40
@@ -2410,6 +2414,15 @@ function generateLoot(c) {
       c.slots[indexes[starIdx]] = createItem(STAR_ITEM);
       c.hasStar = true;
     }
+    /* S1 W17.7：加密房卡 —— 每种容器单独掷概率，不稀释正常爆率
+       （联机时两端同种子、同掷序，结果一致） */
+    var KC_CHANCE = { supply:0.06, weapon:0.12, safe:0.18, medical:0.02 };
+    if (lootRng() < (KC_CHANCE[c.type] || 0)) {
+      for (var kq = 0; kq < indexes.length; kq++) {
+        var kslot = indexes[kq], kcur = c.slots[kslot];
+        if (!kcur || kcur.name !== '东洲之星') { c.slots[kslot] = createItem(KEYCARD_DEF); break; }
+      }
+    }
   } finally { LOOT_RNG = prevRng; }
 }
 
@@ -2417,7 +2430,7 @@ function generateLoot(c) {
 /* W6.3：安全箱是独立 2 格（SECURE_SLOTS），不占用背包容量 */
 var BASE_BAG_SIZE = 24, BAG_SIZE = BASE_BAG_SIZE;
 var bag = new Array(BAG_SIZE).fill(null);
-var activeContainer = null, nearestContainer = null, lootOpen = false, selectedItem = null;
+var activeContainer = null, nearestContainer = null, nearestKeyDoor = null, lootOpen = false, selectedItem = null;
 var search = null, containersOpened = 0, itemsLooted = 0, toastT = null;
 var overlay = document.getElementById('loot-overlay'), containerPanel = document.getElementById('container-panel');
 var containerGrid = document.getElementById('container-grid'), bagGrid = document.getElementById('bag-grid');
@@ -3283,7 +3296,7 @@ function renderShop() {
   gearDefs.forEach(function(d) { list.push(d); });
   /* S1：安全箱上架 —— 4 格 $1500 / 6 格 $10005 / 9 格 $40005（默认 2 格免费自带，不上架） */
   ITEM_DEFS.filter(function(d) { return d.equip === 'safebox' && d.shopOnly; }).forEach(function(d) { list.push(d); });
-  ['野战医疗包','战地急救箱','实验性药剂'].forEach(function(n) {
+  ['野战医疗包','战地急救箱','实验性药剂','加密房卡'].forEach(function(n) {
     list.push(ITEM_DEFS.filter(function(d) { return d.name === n; })[0]);
   });
   list.forEach(function(def) {
@@ -4075,6 +4088,7 @@ bindTap(interactBtn, function() {
   /* 联机：靠近倒地队友时，交互键变成「救援」 */
   if (mpReviveTarget && !MP.downed) { return; }   // 按住时由 mpUpdateDown 推进进度
   if (nearestExtractionPoint) startExtraction(nearestExtractionPoint);
+  else if (nearestKeyDoor) tryOpenKeyRoom();
   else startSearch(nearestContainer);
 });
 /* 交互键按住状态（救人需要按住），触屏与鼠标都支持 */
@@ -4257,6 +4271,7 @@ addEventListener('keydown', function(e) {
     /* W16.10：撤离读条中再按 F → 取消撤离 */
     if (extraction) { cancelExtraction('已取消撤离'); return; }
     if (nearestExtractionPoint) startExtraction(nearestExtractionPoint);
+    else if (nearestKeyDoor) tryOpenKeyRoom();
     else startSearch(nearestContainer);
   }
 });
@@ -4736,6 +4751,7 @@ function startNewRun() {
   syncBagSize(false);
   mag = MAG_SIZE; reloadT = 0; fireCd = 0; shake = 0; muzzle = 0;
   bag.fill(null); RUN_BAG = [];
+  carryKeycards();   /* S1 W17.7：仓库里的房卡自动带进本局（最多 2 张） */
   containers.forEach(function(c) { c.slots.fill(null); c.opened = false; });
   populateAIs();
   kills = 0; containersOpened = 0; itemsLooted = 0; deathCount = 0;
@@ -5862,14 +5878,24 @@ function update(dt) {
     var cd = Math.hypot(containers[ci].x - player.x, containers[ci].y - player.y);
     if (cd < nearD) { nearD = cd; nearestContainer = containers[ci]; }
   }
+  /* S1 W17.7：加密房门的就近检测 */
+  nearestKeyDoor = null;
+  if (keyRoomDoor) {
+    var kdcx = keyRoomDoor.x + keyRoomDoor.w / 2, kdcy = keyRoomDoor.y + keyRoomDoor.h / 2;
+    if (Math.hypot(kdcx - player.x, kdcy - player.y) < 96) nearestKeyDoor = keyRoomDoor;
+  }
   updateSearch(dt); updateExtraction(dt);
   shield = Math.min(shield, armorValue() * ARMOR_PER_POINT);
   /* W16.10：撤离读条时交互键变为「取消撤离」按钮（手机端可点取消），不再隐藏 */
   interactBtn.hidden = lootOpen || stashOpen || !!search || runEnded || player.dead ||
-    (!nearestExtractionPoint && !nearestContainer && !extraction);  refreshHealButton(); refreshReloadButton();
+    (!nearestExtractionPoint && !nearestContainer && !nearestKeyDoor && !extraction);  refreshHealButton(); refreshReloadButton();
   healBtn.hidden = lootOpen || stashOpen || mapOpen() || runEnded || player.dead || inMenu();
   if (extraction) { interactBtn.textContent = '取消撤离 F'; interactBtn.disabled = false; }
   else if (nearestExtractionPoint) interactBtn.textContent = '撤离 ' + nearestExtractionPoint.name + ' F';
+  else if (nearestKeyDoor) {
+    interactBtn.textContent = (keycardSlot() >= 0 ? '刷卡开门 F' : '需要加密房卡 F');
+    interactBtn.disabled = false;
+  }
   else if (nearestContainer) {
     var locked = mpInRoom() && !mpSearchLockFree() && MP.searchLockBy !== frMe();
     interactBtn.textContent = locked
@@ -5982,6 +6008,24 @@ function render() {
   ctx.beginPath();
   for (var wi = 0; wi < walls.length; wi++) ctx.rect(walls[wi].x, walls[wi].y, walls[wi].w, walls[wi].h);
   ctx.stroke();
+
+  /* S1 W17.7：加密房间 —— 地面提示 + 黄色房卡门 */
+  if (selectedMap && KEY_ROOMS[selectedMap.id]) {
+    var krm = KEY_ROOMS[selectedMap.id].room;
+    ctx.fillStyle = 'rgba(250,204,21,.05)';
+    ctx.fillRect(krm.x, krm.y, krm.w, krm.h);
+    ctx.strokeStyle = 'rgba(250,204,21,.30)'; ctx.lineWidth = 1.5; ctx.setLineDash([10, 8]);
+    ctx.strokeRect(krm.x + 6, krm.y + 6, krm.w - 12, krm.h - 12); ctx.setLineDash([]);
+  }
+  if (keyRoomDoor) {
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(keyRoomDoor.x, keyRoomDoor.y, keyRoomDoor.w, keyRoomDoor.h);
+    ctx.strokeStyle = '#fde047'; ctx.lineWidth = 2;
+    ctx.strokeRect(keyRoomDoor.x - 1, keyRoomDoor.y - 1, keyRoomDoor.w + 2, keyRoomDoor.h + 2);
+    ctx.textAlign = 'center'; ctx.font = 'bold 12px ui-monospace, "Noto Sans Mono CJK SC", monospace';
+    ctx.fillStyle = '#fde047';
+    ctx.fillText('🔒 房卡门', keyRoomDoor.x + keyRoomDoor.w / 2, keyRoomDoor.y - 12);
+  }
 
   /* 撤离区 */
   var pulse = 0.72 + Math.sin(performance.now() / 240) * 0.12;
@@ -6410,6 +6454,11 @@ function paintMap(g, baseX, baseY, k, isFull) {
     var w = walls[i];
     g.fillRect(w.x * k, w.y * k, Math.max(1, w.w * k), Math.max(1, w.h * k));
   }
+  /* S1 W17.7：加密房门（小地图上也用黄色标出） */
+  if (keyRoomDoor) {
+    g.fillStyle = '#facc15';
+    g.fillRect(keyRoomDoor.x * k - 1, keyRoomDoor.y * k - 1, Math.max(2, keyRoomDoor.w * k + 2), Math.max(2, keyRoomDoor.h * k + 2));
+  }
   /* 容器（仅全屏显示，小地图保持干净） */
   if (isFull) {
     for (var c2 = 0; c2 < containers.length; c2++) {
@@ -6581,6 +6630,16 @@ var MAP_PLANS = {
    各图再拆掉几处不同掩体、盖上自己的专属建筑（坐标离线验证：离墙≥55 / 离物资点≥85 / 离撤离点≥150）。
    撤离点、分区、物资布点跟随同样变换，保证整张图是「另一张图」而不是换色。 */
 var MAP_WALL_SETS = {};
+/* S1 W17.7：房卡加密房间 —— 三张图分别落在不同角落，坐标离线验证过（离墙≥40、房间内无原有墙） */
+var KEY_ROOMS = {
+  radar:      { room:{ x:2620, y:1660, w:300, h:260 }, door:{ x:2620, y:1760, w:30, h:100 },
+                loot:[[2760,1740,'safe'],[2820,1840,'weapon']] },   /* 右下角 · 门朝左 */
+  industrial: { room:{ x:280,  y:1660, w:300, h:260 }, door:{ x:550,  y:1760, w:30, h:100 },
+                loot:[[440,1740,'safe'],[380,1840,'weapon']] },     /* 左下角 · 门朝右 */
+  port:       { room:{ x:60,   y:460,  w:300, h:260 }, door:{ x:330,  y:557,  w:30, h:100 },
+                loot:[[200,575,'safe'],[285,655,'weapon']] }       /* 左侧围墙边 · 门朝右 */
+};
+var keyRoomDoor = null;    /* 本局还没刷开的门（可交互） */
 (function () {
   var KIND = { radar:'I', industrial:'MX', port:'R180' };
   var REMOVE = { radar:['1180,180','1600,1620'], industrial:['1440,700','300,1700'], port:['1180,180','1340,1560','900,1180'] };
@@ -6634,7 +6693,7 @@ var MAPS = [
 var selectedMap = MAPS.filter(function(m) { return m.id === savedMapId; })[0] || MAPS[0];
 function loadMap(map) {
   selectedMap = map;
-  walls = MAP_WALL_SETS[map.id] || walls;   /* S1 W17.3：每图独立墙体布局 */
+  walls = (MAP_WALL_SETS[map.id] || walls).slice();   /* S1 W17.3：每图独立墙体布局（拷贝，后面要加房间墙） */
   ZONES = MAP_ZONE_SETS[map.id];
   EXTRACTION_POINTS = MAP_EXTRACT_SETS[map.id];
   AI_DISTRIBUTION = map.aiDist;
@@ -6643,6 +6702,60 @@ function loadMap(map) {
   var types = plan.types;
   var coords = plan.pts;
   containers = coords.map(function(c, i) { return makeContainer(c[0], c[1], types[i]); });
+  loadKeyRoom(map.id);
+  buildWallGrid();   /* S1 W17.7：换图后重建碰撞网格（修复此前一直拿雷达站墙体做碰撞的 bug） */
+}
+/* S1 W17.7：把加密房间的墙拼出来，并在门的位置留一个可交互的门板 */
+function loadKeyRoom(id) {
+  keyRoomDoor = null;
+  var R = KEY_ROOMS[id];
+  if (!R) return;
+  var r = R.room, d = R.door, t = 30;
+  function seg(x, y, w, h) { if (w > 0 && h > 0) walls.push({ x:x, y:y, w:w, h:h }); }
+  var onLeft = d.x <= r.x + 1, onRight = d.x + d.w >= r.x + r.w - 1;
+  var onTop = d.y <= r.y + 1, onBottom = d.y + d.h >= r.y + r.h - 1;
+  if (onTop) { seg(r.x, r.y, d.x - r.x, t); seg(d.x + d.w, r.y, r.x + r.w - d.x - d.w, t); }
+  else seg(r.x, r.y, r.w, t);
+  if (onBottom) { seg(r.x, r.y + r.h - t, d.x - r.x, t); seg(d.x + d.w, r.y + r.h - t, r.x + r.w - d.x - d.w, t); }
+  else seg(r.x, r.y + r.h - t, r.w, t);
+  if (onLeft) { seg(r.x, r.y, t, d.y - r.y); seg(r.x, d.y + d.h, t, r.y + r.h - d.y - d.h); }
+  else seg(r.x, r.y, t, r.h);
+  if (onRight) { seg(r.x + r.w - t, r.y, t, d.y - r.y); seg(r.x + r.w - t, d.y + d.h, t, r.y + r.h - d.y - d.h); }
+  else seg(r.x + r.w - t, r.y, t, r.h);
+  keyRoomDoor = { x:d.x, y:d.y, w:d.w, h:d.h };
+  walls.push(keyRoomDoor);
+  R.loot.forEach(function(l) { containers.push(makeContainer(l[0], l[1], l[2])); });
+}
+/* 房卡：包里有没有 / 仓库里的房卡开局自动带上（最多 2 张） */
+function keycardSlot() {
+  for (var i = 0; i < bag.length; i++) { var it = bag[i]; if (it && it.name === '加密房卡') return i; }
+  return -1;
+}
+function carryKeycards() {
+  var n = 0;
+  for (var i = stash.length - 1; i >= 0 && n < 2; i--) {
+    if (stash[i] && stash[i].name === '加密房卡') {
+      var slot = bag.indexOf(null);
+      if (slot < 0) break;
+      bag[slot] = stash[i]; stash.splice(i, 1); n++;
+    }
+  }
+  if (n) { saveGame(); renderStash(); }
+}
+function tryOpenKeyRoom() {
+  if (!keyRoomDoor || player.dead || runEnded || extraction) return;
+  var idx = keycardSlot();
+  if (idx < 0) {
+    showToast('房门上锁 · 需要「加密房卡」——地图搜刮有机会摸到，商店 $' + Math.round(KEYCARD_DEF.value * BUY_RATE) + ' 有售');
+    return;
+  }
+  bag[idx] = null;
+  var d = keyRoomDoor;
+  walls = walls.filter(function(w) { return w !== d; });
+  keyRoomDoor = null;
+  buildWallGrid();
+  showToast('刷卡成功 · 加密房间已开启');
+  if (lootOpen) renderLoot();
 }
 function inMenu() { return document.body.classList.contains('in-menu'); }
 function renderMapCard() {
@@ -7005,8 +7118,8 @@ function nickAvatar(nick) {
 }
 /* W16.86：官方头像名单 —— 名单里的玩家头像显示指定徽标字（而不是昵称首字） */
 /* W16.92：改成「昵称 → 徽标字」映射，云自从容显示「副」（副策划） */
-var SPECIAL_AVATAR_NICKS = { '曼巴红狼': '策划', '云自从容': '副' };
-function officialBadge(nick) { return SPECIAL_AVATAR_NICKS[String(nick || '')] || ''; }
+var SPECIAL_AVATAR_NICKS = { '曼巴红狼': '策划', '云自从容': '副', '彦祖是我': '副' };   /* W17.6：彦祖是我 → 副策划 */
+function officialBadge(nick) { return SPECIAL_AVATAR_NICKS[s1BaseNick(String(nick || ''))] || ''; }   /* S1：带·测试号后缀的昵称也认得出官方 */
 function isOfficialAvatar(nick) { return !!officialBadge(nick); }
 function setAvatarEl(el, nick) {
   if (!el) return;
@@ -7041,7 +7154,10 @@ function validNick(nick) {
    老玩家第一次登录时，仍用老后端 Supabase 校验一次密码，成功后把存档搬过来并落地本地账号。 */
 var UB_USERS = '/rest/v1/users';
 var S1_NICK_PREFIX = 'S1·';                       /* S1：测试服昵称前缀（库内隔离） */
-function s1Nick(nick) { return String(nick || '').replace(/^S1·/, ''); }   /* 显示时去掉前缀 */
+var S1_NICK_SUFFIX = '·测试号';                    /* S1：测试号后缀 —— 只加在界面上，不写库（避免老账号查不到、昵称超长） */
+function s1BaseNick(nick) { return String(nick || '').replace(/^S1·/, '').replace(/·测试号$/, ''); }   /* 纯昵称：前缀后缀都去掉 */
+function s1StoreNick(nick) { return S1_NICK_PREFIX + s1BaseNick(nick); }   /* 库内存「S1·昵称」 */
+function s1Nick(nick) { var n = s1BaseNick(nick); return n ? n + S1_NICK_SUFFIX : ''; }   /* 界面显示「昵称·测试号」 */
 function ubB64(buf) { var s2 = '', u = new Uint8Array(buf); for (var i = 0; i < u.length; i++) s2 += String.fromCharCode(u[i]); return btoa(s2); }
 function ubUnb64(str) { var bin = atob(str), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 function ubSalt() { var u = new Uint8Array(16); (crypto.getRandomValues ? crypto.getRandomValues(u) : u.forEach(function(_, i) { u[i] = Math.random() * 256 | 0; })); return ubB64(u); }
@@ -7066,30 +7182,46 @@ function ubUuid() {   /* S1：uid 统一加 s1- 前缀 —— 测试服账号与
   return 's1-' + h.slice(0, 4).join('') + '-' + h.slice(4, 6).join('') + '-' + h.slice(6, 8).join('') + '-' + h.slice(8, 10).join('') + '-' + h.slice(10).join('');
 }
 function ubSetSession(uid, nick) {
+  /* S1：会话里存「显示昵称」（去前缀，保留·测试号），账号面板/ multiplayer 上报都用它 */
   sbSess = { access_token: SB_KEY, refresh_token: 'local', expires_at: Date.now() + 31536000000,
-             local: true, user: { id: uid, email: nickToId(nick), user_metadata: { nick: nick } } };
+             local: true, user: { id: uid, email: nickToId(nick), user_metadata: { nick: s1Nick(nick) } } };
   sbStoreSess(sbSess);
 }
 function ubFindUser(nick) {   /* S1：只查测试服自己的账号（S1·前缀） */
-  return sbApi(UB_USERS + '?nick=eq.' + encodeURIComponent(S1_NICK_PREFIX + nick) + '&select=uid,nick,salt,hash&limit=1', {});
+  return sbApi(UB_USERS + '?nick=eq.' + encodeURIComponent(s1StoreNick(nick)) + '&select=uid,nick,salt,hash&limit=1', {});
 }
 function ubCreateUser(nick, pw, uid) {
   var salt = ubSalt();
   return ubHash(pw, salt).then(function(hash) {
     return sbApi(UB_USERS, {
       method: 'POST', headers: { 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ uid: uid, nick: S1_NICK_PREFIX + nick, salt: salt, hash: hash, v: 1 })   /* S1 */
+      body: JSON.stringify({ uid: uid, nick: s1StoreNick(nick), salt: salt, hash: hash, v: 1 })   /* S1·昵称·测试号 */
     });
   }).then(function() {
     return sbApi('/rest/v1/user_nicks?on_conflict=uid', {
       method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ uid: uid, nick: S1_NICK_PREFIX + nick })   /* S1 */
+      body: JSON.stringify({ uid: uid, nick: s1StoreNick(nick) })   /* S1·昵称·测试号 */
     }).catch(function() {});
   });
 }
-/* 老后端校验 → 搬存档 → 落本地账号 */
+/* S1：测试服独立账号，但「第一次用正式服昵称登录」时自动开通 ——
+   用正式服同一套昵称/密码核对，通过后给一个全新的 s1- uid（S1 赛季全新开始，
+   不搬正式服的存档与好友）。之前这里直接 return null，导致玩过正式服的同学
+   来测试服一个都登不进去。 */
 function ubMigrate(nick, pw) {
-  return Promise.resolve(null);   /* S1：测试服独立账号体系，不做老后端迁移 */
+  return sbApi(UB_USERS + '?nick=eq.' + encodeURIComponent(nick) + '&select=uid,nick,salt,hash&limit=1', {})
+    .then(function(rows) {
+      if (!rows || !rows.length) return null;
+      var u = rows[0];
+      if (!u.salt || !u.hash) return null;
+      return ubHash(pw, u.salt).then(function(h) {
+        if (h !== u.hash) return null;
+        return { uid: ubUuid(), save: null, friends: [], fromOfficial: true };   /* 测试服全新账号 */
+      });
+    }).catch(function() { return null; });
+}
+/* 旧版 Supabase 迁移代码保留备查，已不再执行 */
+function ubMigrateLegacy(nick, pw) {
   var ids = nickToIdAll(nick), tok = null, oldUid = null;
   function tryAt(i) {
     if (i >= ids.length) return Promise.reject(new Error('migrate-fail'));
@@ -7175,7 +7307,7 @@ function acctSignIn() {
           }).catch(function() {}));
         }
         return Promise.all(jobs).then(function() {
-          ubSetSession(uid, nick);
+          ubSetSession(uid, s1StoreNick(nick));
           if (oldSave && oldSave.data && applySaveData(oldSave.data)) {
             try { localStorage.setItem(SAVE_KEY, JSON.stringify(oldSave.data)); } catch (e) {}
             refreshAllUI();
@@ -7198,9 +7330,9 @@ function acctSignUp() {
     if (rows && rows.length) { acctBusy(false); acctMsg('这个昵称已被占用，换一个或直接登录', 'err'); return; }
     var uid = ubUuid();
     return ubCreateUser(nick, p, uid).then(function() {
-      ubSetSession(uid, nick);
+      ubSetSession(uid, s1StoreNick(nick));
       acctBusy(false);
-      acctMsg('注册成功，欢迎回来，' + nick, 'ok');
+      acctMsg('注册成功，欢迎回来，' + s1Nick(s1StoreNick(nick)), 'ok');
       renderAcctUI();
       lbPush();                                // W16.72：注册完立刻进榜单，别等第一次同步
       cloudPushNow();                          // 把本机进度作为初始云端存档
@@ -7576,9 +7708,9 @@ function lbClose() {
 var S1_ROADMAP = [
   { id: 1, name: '地图差异化',   status: 'done' },
   { id: 2, name: '保险箱扩容',   status: 'done' },
-  { id: 3, name: '房卡房间',     status: 'plan' },
+  { id: 3, name: '房卡房间',     status: 'done' },
   { id: 4, name: '头盔',         status: 'done' },
-  { id: 5, name: '六品质体系',   status: 'plan' }
+  { id: 5, name: '六品质体系',   status: 'done' }
 ];
 var S1_LAUNCH = '2026-11-30';   // 上线日期（周一）
 
@@ -10890,9 +11022,9 @@ addEventListener('keydown', function(e) {
   (function() {
     var devBtn = document.getElementById('dev-entry');
     if (!devBtn) return;
-    var DEV_NICKS = ['曼巴红狼', '云自从容'];
+    var DEV_NICKS = ['曼巴红狼', '云自从容', '彦祖是我'];   /* W17.6：彦祖是我 → 开发者免口令 */
     devBtn.addEventListener('click', function() {
-      var nick = (sbSess && sbSess.user) ? nickOf(sbSess.user) : '';
+      var nick = (sbSess && sbSess.user) ? s1BaseNick(nickOf(sbSess.user)) : '';   /* S1：去掉·测试号后缀再比对 */
       if (DEV_NICKS.indexOf(nick) >= 0) {
         showToast('开发者身份确认，正在进入…');
         setTimeout(function() { location.href = 'dev.html'; }, 400);
@@ -11166,6 +11298,20 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.7', t:'2026年11月25日 18:55', items:[
+    { k:'新增', d:'房卡加密房间：每张图的隐蔽位置各有一个上锁房间（雷达站右下 / 工业区左下 / 港口西侧围墙边），靠近门按 F 刷「加密房卡」开门，房内是加密保险箱 + 军用武器箱' },
+    { k:'新增', d:'加密房卡：搜刮补给箱/武器箱/保险箱有机会摸到（保险箱概率最高），商店 $2025 有售；仓库里的房卡开局自动带进战局（最多 2 张）' },
+    { k:'修复', d:'换地图后墙体碰撞没跟着换（工业区/港口实际撞的是雷达站的墙）—— 现在每张图的墙、房卡房间都正确参与碰撞' }
+  ]},
+  { v:'W17.6', t:'2026年11月25日 18:40', items:[
+    { k:'修复', d:'登录修复：玩过正式服的同学可以直接用「正式服昵称+密码」登录测试服，首次自动开通测试服独立账号（数据全新、互不影响），不再提示昵称或密码错误' },
+    { k:'调整', d:'「·测试号」改为纯界面标识，不再写进账号数据 —— 老账号、长昵称都不会受影响' },
+    { k:'新增', d:'彦祖是我 → 副策划徽标 + 开发者免口令' }
+  ]},
+  { v:'W17.5', t:'2026年11月25日 13:15', items:[
+    { k:'新增', d:'测试号标识：每个玩家注册后昵称后面自动带上「·测试号」，账号面板、排行榜、好友、房间全员可见' },
+    { k:'修复', d:'开发者免口令与官方徽标（策划/副）在测试号昵称下也能正常识别' }
+  ]},
   { v:'W17.4', t:'2026年11年25', items:[
     { k:'调整', d:'等级系统整体移除：等级、经验、地图等级门槛全部删除，三张图自由进入（装备价值门槛保留）' }
   ]},

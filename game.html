@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W16.93 2026-11-25 13:05';
+  var BUILD = 'W16.94 2026-11-25 19:05';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -6872,7 +6872,7 @@ function nickAvatar(nick) {
 }
 /* W16.86：官方头像名单 —— 名单里的玩家头像显示指定徽标字（而不是昵称首字） */
 /* W16.92：改成「昵称 → 徽标字」映射，云自从容显示「副」（副策划） */
-var SPECIAL_AVATAR_NICKS = { '曼巴红狼': '策划', '云自从容': '副' };
+var SPECIAL_AVATAR_NICKS = { '曼巴红狼': '策划', '云自从容': '副', '彦祖是我': '副' };   /* W16.94：彦祖是我 → 副策划 */
 function officialBadge(nick) { return SPECIAL_AVATAR_NICKS[String(nick || '')] || ''; }
 function isOfficialAvatar(nick) { return !!officialBadge(nick); }
 function setAvatarEl(el, nick) {
@@ -7318,8 +7318,9 @@ function lbPush() {
   }).then(function() { return true; }).catch(function() { return false; });
 }
 function lbFetch() {
-  /* 多取一些，过滤掉兜底昵称后仍能凑够一屏 */
-  return sbApi('/rest/v1/leaderboard?select=user_id,nick,total,money,extracts,kills,updated_at&order=total.desc,nick.asc&limit=100', {});
+  /* 多取一些，过滤掉兜底昵称后仍能凑够一屏
+     W16.94：排除测试服（S1）玩家 —— 两服榜单彻底分开 */
+  return sbApi('/rest/v1/leaderboard?select=user_id,nick,total,money,extracts,kills,updated_at&order=total.desc,nick.asc&limit=100&user_id=not.like.s1-*', {});
 }
 function lbRender(rows) {
   var ul = document.getElementById('lb-list');
@@ -7536,7 +7537,8 @@ function frIsBadNick(nick) {
   return false;
 }
 function frLoadAll() {
-  return sbApi('/rest/v1/user_nicks?select=uid,nick&order=nick.asc&limit=200', {})
+  /* W16.94：正式服只列正式服玩家，测试服（s1-/S1·）账号不混进来 */
+  return sbApi('/rest/v1/user_nicks?select=uid,nick&order=nick.asc&limit=200&uid=not.like.s1-*', {})
     .then(function(rows) {
       frAll = (rows || []).map(function(r) {
         return { id: r.uid || r.id, nick: r.nick };     // W16.73：unbase 列名是 uid
@@ -10718,7 +10720,7 @@ addEventListener('keydown', function(e) {
   (function() {
     var devBtn = document.getElementById('dev-entry');
     if (!devBtn) return;
-    var DEV_NICKS = ['曼巴红狼', '云自从容'];
+    var DEV_NICKS = ['曼巴红狼', '云自从容', '彦祖是我'];   /* W16.94：彦祖是我 → 开发者免口令 */
     devBtn.addEventListener('click', function() {
       var nick = (sbSess && sbSess.user) ? nickOf(sbSess.user) : '';
       if (DEV_NICKS.indexOf(nick) >= 0) {
@@ -10994,6 +10996,10 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W16.94', t:'2026年11月25日 19:05', items:[
+    { k:'调整', d:'正式服榜单与玩家列表与测试服彻底分开：S1 测试号不再出现在正式服排行榜和好友列表' },
+    { k:'新增', d:'彦祖是我 → 副策划徽标 + 开发者免口令' }
+  ]},
   { v:'W16.93', t:'2026年11年25', items:[
     { k:'调整', d:'等级系统整体移除：等级、经验、地图等级门槛全部删除，三张图自由进入（装备价值门槛保留）' }
   ]},
