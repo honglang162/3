@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.7 2026-11-25 18:55';
+  var BUILD = 'W17.8 2026-11-25 20:10';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1707,7 +1707,8 @@
     <ul class="s1-list">
       <li><b>🗺️ 地图焕新<i>已上线</i></b><span>每张地图独一无二——布局、地貌、建筑各不相同，告别一模一样</span></li>
       <li><b>🧰 保险箱扩容<i>已上线</i></b><span>保险箱数量大幅增加，搜刮更有惊喜</span></li>
-      <li><b>🗝️ 房卡房间<i>已上线</i></b><span>地图角落藏着需要刷卡的加密房间——房卡既能在地图里摸到，也能在商店购买</span></li>
+      <li><b>🗝️ 房卡房间<i>已上线</i></b><span>每张图 6 个贴边缘的加密房间：补给储藏间 / 医疗室 / 军械库 / 情报室 / 曼巴策划工作室 / 起源核心室，房卡越贵房内物资越多</span></li>
+      <li><b>🎒 卡包系统<i>已上线</i></b><span>房卡必须装进卡包才能刷卡进房 —— 默认 2 格，商店可升级到 4 格 / 6 格</span></li>
       <li><b>🪖 全新装备：头盔<i>已上线</i></b><span>头部防护正式登场，防护体系再添一环</span></li>
       <li><b>🎨 六大品质体系<i>计划中</i></b><span>每种装备都有六档品质：白 · 绿 · 蓝 · 紫 · 金 · 红</span></li>
     </ul>
@@ -1763,8 +1764,10 @@
     <div id="panel-loadout" class="stash-panel active" role="tabpanel" aria-labelledby="tab-loadout">
       <div class="loadout">
         <div>
-          <p class="panel-sub">点击装备格可卸下（放回仓库）· 安全箱默认 2 格，商店可购买 4 / 6 / 9 格 · 阵亡不掉 · 胸挂格子和背包合并计算 · 装备价值按「武器＋护甲＋背包＋胸挂」计算，开局时检测</p>
+          <p class="panel-sub">点击装备格可卸下（放回仓库）· 安全箱默认 2 格，商店可购买 4 / 6 / 9 格 · 阵亡不掉 · 卡包默认 2 格，商店可升级 4 / 6 格（房卡必须装进卡包才能带进局） · 胸挂格子和背包合并计算 · 装备价值按「武器＋护甲＋背包＋胸挂」计算，开局时检测</p>
           <div id="equip-slots" class="loadout-slots"></div>
+          <p class="panel-sub" id="cardpack-hint" style="margin-top:10px">卡包（房卡只能放这里带进局内）</p>
+          <div id="cardpack-slots" class="loadout-slots" style="grid-template-columns:repeat(auto-fill,minmax(86px,1fr));margin-top:6px"></div>
         </div>
         <div>
           <p class="panel-sub">护甲值决定你每局能承受的额外伤害</p>
@@ -1780,7 +1783,7 @@
       </div>
     </div>
     <div id="panel-stash" class="stash-panel" role="tabpanel" aria-labelledby="tab-stash">
-      <p class="panel-sub">点击物品：材料类可出售，装备类可穿戴。容器容量 <span id="stash-meta">0</span></p>
+      <p class="panel-sub">点击物品：材料类可出售，装备类可穿戴，房卡点「装入卡包」。容器容量 <span id="stash-meta">0</span></p>
       <div id="stash-grid" class="slot-grid"></div>
     </div>
     <div id="panel-shop" class="stash-panel" role="tabpanel" aria-labelledby="tab-shop">
@@ -2178,6 +2181,7 @@ var BASE_GUN = { name:'制式手枪', dmg:16, mag:17, reload:1.35, fireGap:0.19,
 /* W6：安全箱 —— 死亡也不回丢的保底格位（放在背包末尾） */
 var SAFE_KEY = 0, SAFE_SECURE = 2;          // W6.3：安全箱独立区域，固定 2 格（不再占用背包格）
 var SECURE_SLOTS = [null, null];            // 安全箱内的 2 个格子
+var CARDPACK_SLOTS = [null, null];          // S1 W17.8：卡包里的 2 个卡位（默认 2 格，最大 6 格）
 var SAFEBOX_STAGES = [
   { level:0, name:'无安全箱',   key:0, secure:0, cost:0 },
   { level:1, name:'小号安全箱', key:2, secure:1, cost:3200 },
@@ -2190,6 +2194,7 @@ var EQUIP_SLOTS = [
   { key:'pack', label:'背包', short:'包' },
   { key:'rig', label:'胸挂', short:'挂' },
   { key:'med', label:'医疗', short:'药' },
+  { key:'cardpack', label:'卡包', short:'卡' },
   { key:'safebox', label:'安全箱', short:'箱' }
 ];
 /* W6：5 把枪数值（伤害 / 弹匣 / 装填 / 射频 / 精度 / 弹速） */
@@ -2239,9 +2244,20 @@ var ITEM_DEFS = [
   { name:'军用安全箱', short:'安全箱', rarity:'epic', value:1111, kind:'安全箱', equip:'safebox', secure:4, sources:[], noSell:true, shopOnly:true },
   { name:'俄商安全箱', short:'安全箱', rarity:'legendary', value:7411, kind:'安全箱', equip:'safebox', secure:6, sources:[], noSell:true, shopOnly:true },
   { name:'原型安全箱', short:'安全箱', rarity:'mythic', value:29633, kind:'安全箱', equip:'safebox', secure:9, sources:[], noSell:true, shopOnly:true },
-  /* S1 W17.7：加密房卡 —— 开地图角落的加密房间；地图里搜刮有机会摸到，商店也有售。
-     sources 留空 = 不进普通随机池，改由 generateLoot 按容器类型单独掷概率（不稀释正常爆率） */
-  { name:'加密房卡', short:'房卡', rarity:'epic', value:1500, kind:'房卡', sources:[] },
+  /* S1 W17.8：房卡体系 —— 六种房卡对应六种加密房间，白→红品质，越贵房内物资越多。
+     card 字段 = 门锁匹配键（门与卡靠它配对）；sources 留空 = 不进普通随机池，
+     改由 generateLoot 按容器类型单独掷概率（不稀释正常爆率） */
+  { name:'补给间房卡', short:'补给卡', rarity:'common',    value:300,   kind:'房卡', card:'supply',  room:'补给储藏间',     sources:[] },
+  { name:'医疗房卡',   short:'医疗卡', rarity:'uncommon',  value:1000,  kind:'房卡', card:'medical', room:'医疗室',         sources:[] },
+  { name:'军械房卡',   short:'军械卡', rarity:'rare',      value:2600,  kind:'房卡', card:'weapon',  room:'军械库',         sources:[] },
+  { name:'情报房卡',   short:'情报卡', rarity:'epic',      value:6500,  kind:'房卡', card:'intel',   room:'情报室',         sources:[] },
+  { name:'工作室房卡', short:'工作室卡', rarity:'legendary', value:14000, kind:'房卡', card:'studio',  room:'曼巴策划工作室', sources:[] },
+  { name:'起源房卡',   short:'起源卡', rarity:'mythic',    value:32000, kind:'房卡', card:'origin',  room:'起源核心室',     sources:[] },
+  /* S1 W17.8：卡包 —— 只能靠卡包带房卡进局内（房卡不占背包、必须装备在卡包格）。
+     默认自带 2 格「简易卡包」；4 格 $12000 / 6 格 $45000 商店购买 */
+  { name:'简易卡包', short:'卡包', rarity:'common',    value:0,     kind:'卡包', equip:'cardpack', cards:2, sources:[], noSell:true, hidden:true },
+  { name:'战术卡包', short:'卡包', rarity:'rare',      value:8889,  kind:'卡包', equip:'cardpack', cards:4, sources:[], shopOnly:true },
+  { name:'重型卡包', short:'卡包', rarity:'legendary', value:33333, kind:'卡包', equip:'cardpack', cards:6, sources:[], shopOnly:true },
   /* —— 装备类：可购买、穿戴、带进战局 —— */
   { name:'制式短枪', short:'短枪', rarity:'common', value:300, kind:'武器', equip:'weapon', sources:['weapon','ai'] },
   { name:'加长冲锋枪', short:'冲锋', rarity:'uncommon', value:1100, kind:'武器', equip:'weapon', sources:['weapon','ai'] },
@@ -2277,7 +2293,20 @@ var CONTAINER_TYPES = {   /* W16.85：全图爆率上调 —— 每箱物品数�
 };
 /* 东洲之星：对标“非洲之星”，只在加密保险箱里以极低概率出货 */
 var STAR_ITEM = ITEM_DEFS.filter(function(d) { return d.name === '东洲之星'; })[0];
-var KEYCARD_DEF = ITEM_DEFS.filter(function(d) { return d.name === '加密房卡'; })[0];   /* S1 W17.7 */
+var KEYCARDS = ITEM_DEFS.filter(function(d) { return d.card; });      /* S1 W17.8：六种房卡 */
+var CARD_BY_KEY = {};                                                  /* 门锁键 → 房卡定义 */
+KEYCARDS.forEach(function(d) { CARD_BY_KEY[d.card] = d; });
+var CARDPACK_DEF = ITEM_DEFS.filter(function(d) { return d.name === '简易卡包'; })[0];
+/* S1 W17.8：局内房卡掉落池 —— 按容器类型分池，越危险的箱子越容易出高价值房卡 */
+var CARD_DROPS = (function () {
+  function c(k) { return CARD_BY_KEY[k]; }
+  return {
+    supply:  [c('supply'), c('supply'),  c('medical'), c('weapon')],
+    medical: [c('medical'), c('medical'), c('supply'), c('intel')],
+    weapon:  [c('weapon'), c('weapon'),  c('intel'),  c('studio')],
+    safe:    [c('intel'),  c('intel'),   c('studio'), c('studio'), c('origin')]
+  };
+})();
 /* ============ W16.22：等级系统（等级门槛绑定地图） ============
    等级 1~60，靠每局结算经验升级。三张地图对应三个等级门槛：
      山地雷达站（低风险）Lv.1 → 废弃工业区（中风险）Lv.20 → 港口仓储区（超高风险）Lv.40
@@ -2370,6 +2399,9 @@ function createItem(def) {
     value:def.value || 0, kind:def.kind,
     equip:def.equip || null, armor:def.armor || 0, slotBonus:def.slotBonus || 0, heal:def.heal || 0 };
   if (def.secure) it.secure = def.secure;     // W6：安全箱保底格数
+  if (def.cards) it.cards = def.cards;        // S1 W17.8：卡包卡位数
+  if (def.card) it.card = def.card;           // S1 W17.8：房卡门锁键
+  if (def.room) it.room = def.room;           // S1 W17.8：房卡对应的房间名
   if (def.noSell) it.noSell = true;
   if (def.level) it.level = def.level;
   return it;
@@ -2414,13 +2446,15 @@ function generateLoot(c) {
       c.slots[indexes[starIdx]] = createItem(STAR_ITEM);
       c.hasStar = true;
     }
-    /* S1 W17.7：加密房卡 —— 每种容器单独掷概率，不稀释正常爆率
+    /* S1 W17.8：房卡掉落 —— 每种容器单独掷概率、单独卡池，不稀释正常爆率
        （联机时两端同种子、同掷序，结果一致） */
-    var KC_CHANCE = { supply:0.06, weapon:0.12, safe:0.18, medical:0.02 };
+    var KC_CHANCE = { supply:0.07, weapon:0.13, safe:0.20, medical:0.03 };
     if (lootRng() < (KC_CHANCE[c.type] || 0)) {
+      var kcPool = CARD_DROPS[c.type] || CARD_DROPS.supply;
+      var kcDef = kcPool[Math.floor(lootRng() * kcPool.length)];
       for (var kq = 0; kq < indexes.length; kq++) {
         var kslot = indexes[kq], kcur = c.slots[kslot];
-        if (!kcur || kcur.name !== '东洲之星') { c.slots[kslot] = createItem(KEYCARD_DEF); break; }
+        if (!kcur || kcur.name !== '东洲之星') { if (kcDef) c.slots[kslot] = createItem(kcDef); break; }
       }
     }
   } finally { LOOT_RNG = prevRng; }
@@ -2952,7 +2986,7 @@ else initBgm();
 
 /* ============ W5：仓库、买卖、配装、localStorage 存档 ============ */
 var SAVE_KEY = 'extractionS1.save.v1', SAVE_VER = 2;   // S1：测试服独立本地存档   // W6：新存档结构（安全箱）
-var equip = { weapon:null, armor:null, pack:null, rig:null, med:null, helmet:null, safebox:null };  // 装备实例（S1 增加头盔）
+var equip = { weapon:null, armor:null, pack:null, rig:null, med:null, helmet:null, safebox:null, cardpack:null };  // 装备实例（S1 增加头盔 / 卡包）
 /* W6.3：安全箱两格存放在 SECURE_SLOTS（见上方定义），死亡也不掉落 */
 var stash = [], money = 4500, totalRuns = 0, totalExtracts = 0, totalKills = 0, kindStats = {};
 /* W6：安全箱走「升级」流程，不占用商店货架 */
@@ -3002,8 +3036,48 @@ function syncSecureSlots() {
   SECURE_SLOTS.length = n;
   while (SECURE_SLOTS.length < n) SECURE_SLOTS.push(null);
 }
-function bagValue() { return bag.reduce(function(sum, it) { return sum + (it ? it.value : 0); }, 0); }
-function firstEquipIt() {
+/* S1 W17.8：卡包 —— 房卡不占背包，必须放进卡包才能带进局内刷卡。
+   默认 2 格；商店买 4 / 6 格卡包后卡位随之增加（超出容量的卡自动退回仓库，不丢失） */
+function cardpackSlots() {
+  var n = equip.cardpack ? (equip.cardpack.cards || 0) : 0;
+  return Math.max(2, Math.min(6, n));
+}
+function syncCardpackSlots() {
+  var n = cardpackSlots();
+  for (var i = CARDPACK_SLOTS.length - 1; i >= n; i--) {
+    if (!CARDPACK_SLOTS[i]) continue;
+    stash.push(CARDPACK_SLOTS[i]);
+    CARDPACK_SLOTS[i] = null;
+  }
+  CARDPACK_SLOTS.length = n;
+  while (CARDPACK_SLOTS.length < n) CARDPACK_SLOTS.push(null);
+}
+function cardpackFree() { for (var i = 0; i < CARDPACK_SLOTS.length; i++) if (!CARDPACK_SLOTS[i]) return i; return -1; }function cardpackCount() { return CARDPACK_SLOTS.filter(Boolean).length; }
+/* 老存档没有卡包字段 → 自动补一个默认 2 格卡包（不占仓库、不可卖） */
+function ensureCardpack() {
+  if (!equip.cardpack) equip.cardpack = createItem(CARDPACK_DEF);
+  if (typeof CARDPACK_SLOTS === 'undefined' || !CARDPACK_SLOTS) CARDPACK_SLOTS = [null, null];
+  syncCardpackSlots();
+}
+/* 仓库里的房卡 → 装进卡包空位 */
+function stowCard(it) {
+  if (!it || !it.card) return false;
+  var slot = cardpackFree();
+  if (slot < 0) { showToast('卡包已满（' + cardpackSlots() + ' 格）· 去商店买更大的卡包'); return false; }
+  var idx = stash.indexOf(it); if (idx >= 0) stash.splice(idx, 1);
+  CARDPACK_SLOTS[slot] = it;
+  showToast('已放入卡包：' + it.name + '（' + cardpackCount() + '/' + cardpackSlots() + '）');
+  saveGame(); renderStash(); renderLoadout();
+  return true;
+}
+/* 卡包里的卡 → 取回仓库 */
+function pullCard(i) {
+  var it = CARDPACK_SLOTS[i]; if (!it) return;
+  CARDPACK_SLOTS[i] = null; stash.push(it);
+  showToast('已取回仓库：' + it.name);
+  saveGame(); renderStash(); renderLoadout();
+}
+function bagValue() { return bag.reduce(function(sum, it) { return sum + (it ? it.value : 0); }, 0); }function firstEquipIt() {
   if (equip.med) return equip.med;
   for (var i = 0; i < stash.length; i++) if (stash[i] && stash[i].equip === 'med') return stash[i];
   return null;
@@ -3012,14 +3086,18 @@ function firstEquipIt() {
 /* ---------- 存档 ---------- */
 function serItem(it) {
   return it ? { n:it.name, r:it.rarity, v:it.value, k:it.kind, e:it.equip, a:it.armor,
-    b:it.slotBonus, h:it.heal, l:it.look, s:it.secure || 0 } : null;
+    b:it.slotBonus, h:it.heal, l:it.look, s:it.secure || 0, cp:it.cards || 0, cd:it.card || null } : null;
 }
 function deItem(o) {
   if (!o) return null;
-  var it = { id:itemSerial++, name:o.n, short:(ITEM_DEFS.filter(function(d) { return d.name === o.n; })[0] || {}).short || o.n,
+  var nm = o.n === '加密房卡' ? '情报房卡' : o.n;      /* S1 W17.8：旧版加密房卡自动升级为情报房卡 */
+  var it = { id:itemSerial++, name:nm, short:(ITEM_DEFS.filter(function(d) { return d.name === nm; })[0] || {}).short || nm,
     rarity:o.r, value:o.v, kind:o.k, equip:o.e || null, armor:o.a || 0, slotBonus:o.b || 0,
     heal:o.h || 0, look:o.l || null };
   if (o.s) { it.secure = o.s; it.noSell = true; }
+  if (o.cp) it.cards = o.cp;
+  if (o.cd) it.card = o.cd;
+  if (nm !== o.n) { var nd = ITEM_DEFS.filter(function(d) { return d.name === nm; })[0]; if (nd) { it.value = nd.value; it.card = nd.card; } }
   return it;
 }
 function saveGame() {
@@ -3027,8 +3105,8 @@ function saveGame() {
     var data = {
       ver:SAVE_VER, money:money, stash:stash.map(serItem),
       equip:{ weapon:serItem(equip.weapon), armor:serItem(equip.armor), pack:serItem(equip.pack), rig:serItem(equip.rig),
-        med:serItem(equip.med), helmet:serItem(equip.helmet), safebox:serItem(equip.safebox) },
-      run:bag.map(serItem), secure:SECURE_SLOTS.map(serItem), runActive:!runEnded && !player.dead,
+        med:serItem(equip.med), helmet:serItem(equip.helmet), safebox:serItem(equip.safebox), cardpack:serItem(equip.cardpack) },
+      run:bag.map(serItem), secure:SECURE_SLOTS.map(serItem), cards:CARDPACK_SLOTS.map(serItem), runActive:!runEnded && !player.dead,
       stats:{ runs:totalRuns, extracts:totalExtracts, kills:totalKills, xp:playerXp },
       mapId:(selectedMap && selectedMap.id) || 'radar',
       kindStats:kindStats, ts:Date.now()
@@ -3044,10 +3122,13 @@ function applySaveData(data) {
   stash = (data.stash || []).map(deItem).filter(Boolean);
   equip = { weapon:deItem(data.equip && data.equip.weapon), armor:deItem(data.equip && data.equip.armor),
     pack:deItem(data.equip && data.equip.pack), rig:deItem(data.equip && data.equip.rig),
-    med:deItem(data.equip && data.equip.med), helmet:deItem(data.equip && data.equip.helmet), safebox:deItem(data.equip && data.equip.safebox) };
+    med:deItem(data.equip && data.equip.med), helmet:deItem(data.equip && data.equip.helmet), safebox:deItem(data.equip && data.equip.safebox),
+    cardpack:deItem(data.equip && data.equip.cardpack) };
   var ss = (data.secure && data.secure.length) ? data.secure : (data.secure ? [data.secure] : []);
   SECURE_SLOTS = ss.map(function(x) { return deItem(x); });
   syncSecureSlots();
+  CARDPACK_SLOTS = (data.cards || []).map(function(x) { return deItem(x); });
+  ensureCardpack();
   var st = data.stats || {};
   totalRuns = st.runs || 0; totalExtracts = st.extracts || 0; totalKills = st.kills || 0;
   /* W16.23：等级只升不降（云端/他机存档经验更少时不回退） */
@@ -3066,10 +3147,13 @@ function loadGame() {
   stash = (data.stash || []).map(deItem).filter(Boolean);
   equip = { weapon:deItem(data.equip && data.equip.weapon), armor:deItem(data.equip && data.equip.armor),
     pack:deItem(data.equip && data.equip.pack), rig:deItem(data.equip && data.equip.rig),
-    med:deItem(data.equip && data.equip.med), helmet:deItem(data.equip && data.equip.helmet), safebox:deItem(data.equip && data.equip.safebox) };
+    med:deItem(data.equip && data.equip.med), helmet:deItem(data.equip && data.equip.helmet), safebox:deItem(data.equip && data.equip.safebox),
+    cardpack:deItem(data.equip && data.equip.cardpack) };
   var savedSafe = (data.secure && data.secure.length) ? data.secure : (data.secure ? [data.secure] : []);
   SECURE_SLOTS = savedSafe.map(function(x) { return deItem(x); });
   syncSecureSlots();
+  CARDPACK_SLOTS = (data.cards || []).map(function(x) { return deItem(x); });
+  ensureCardpack();
   var st = data.stats || {};
   totalRuns = st.runs || 0; totalExtracts = st.extracts || 0; totalKills = st.kills || 0;
   playerXp = Math.max(0, st.xp || 0);
@@ -3081,9 +3165,9 @@ function loadGame() {
 function newSave() {
   money = 4500; totalRuns = 0; totalExtracts = 0; totalKills = 0; kindStats = {};
   playerXp = 0; savedMapId = 'radar';
-  stash = []; equip = { weapon:null, armor:null, pack:null, rig:null, med:null, helmet:null, safebox:null }; RUN_BAG = []; SECURE_SLOTS = [null, null];
+  stash = []; equip = { weapon:null, armor:null, pack:null, rig:null, med:null, helmet:null, safebox:null, cardpack:null }; RUN_BAG = []; SECURE_SLOTS = [null, null];
   // 初始物资：一把短枪 + 轻甲 + 挎包 + 两卷绷带 + 一把备用短枪（可在仓库卖掉换钱）
-  ['制式短枪','制式短枪','轻型防弹背心','战术挎包','轻型胸挂','消毒绷带','消毒绷带','战术安全箱'].forEach(function(name) {
+  ['制式短枪','制式短枪','轻型防弹背心','战术挎包','轻型胸挂','消毒绷带','消毒绷带','战术安全箱','简易卡包'].forEach(function(name) {
     var def = ITEM_DEFS.filter(function(d) { return d.name === name; })[0];
     if (def) stash.push(createItem(def));
   });
@@ -3092,7 +3176,12 @@ function newSave() {
     var sb = stash.filter(function(it) { return it.equip === 'safebox'; })[0];
     if (sb) { stash.splice(stash.indexOf(sb), 1); equip.safebox = sb; }
   }
+  if (!equip.cardpack) {                // S1 W17.8：新手默认带 2 格简易卡包
+    var cp = stash.filter(function(it) { return it.equip === 'cardpack'; })[0];
+    if (cp) { stash.splice(stash.indexOf(cp), 1); equip.cardpack = cp; }
+  }
   syncSecureSlots();
+  ensureCardpack();
   saveGame();
 }
 function autoEquipBest() {
@@ -3129,6 +3218,7 @@ function equipItem(it) {
   equip[it.equip] = it;
   if (old) stash.push(old);
   if (it.equip === 'safebox') syncSecureSlots();   // S1：换箱后格位与容量对齐（多余物品退回背包）
+  if (it.equip === 'cardpack') syncCardpackSlots(); // S1 W17.8：换卡包后卡位对齐（超出的卡退回仓库）
   syncBagSize(true); applyLoadoutOnRun(true);
   saveGame(); renderStash(); renderLoadout(); renderLoot();
   return true;
@@ -3188,6 +3278,8 @@ function itemMetaText(it) {
   if (it.equip === 'helmet') return '防御 ' + it.armor + ' ≈ +' + Math.round(it.armor * 0.6 * ARMOR_PER_POINT) + ' 生命 · 与护甲叠加';
   if (it.equip === 'pack') return '额外 ' + it.slotBonus + ' 格';
   if (it.equip === 'rig') return '额外 ' + it.slotBonus + ' 格 · 与背包合并';
+  if (it.equip === 'cardpack') return (it.cards || 2) + ' 个卡位 · 房卡必须放这里才能带进局';
+  if (it.card) return '开启「' + (it.room || '加密房间') + '」 · 需装进卡包';
   if (it.equip === 'med') return '回复 ' + it.heal + ' 生命';
   return it.kind;
 }
@@ -3203,11 +3295,34 @@ function renderLoadout() {
       '<span class="eq-meta">' + (it ? itemMetaText(it) + ' · $' + it.value : '点击仓库物品穿戴') + '</span></span>';
     if (it) {
       if (slot.key === 'safebox') b.title = '安全箱不可卸下';
+      else if (slot.key === 'cardpack') b.title = '卡包不可卸下（可在商店换更大容量）';
       else b.addEventListener('click', function() { unequipSlot(slot.key); });
     }
     else b.disabled = false;
     wrap.appendChild(b);
   });
+  /* S1 W17.8：卡包卡位 —— 已装房卡在这里显示，点击取回仓库 */
+  var cpWrap = document.getElementById('cardpack-slots');
+  if (cpWrap) {
+    cpWrap.innerHTML = '';
+    var cpN = cardpackSlots();
+    for (var ci = 0; ci < cpN; ci++) {
+      (function(i) {
+        var card = CARDPACK_SLOTS[i];
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'equip-slot';
+        if (card) b.dataset.rarity = card.rarity;
+        b.innerHTML = (card ? itemIcon(card) : '') + '<span class="eq-label">卡位 ' + (i + 1) + '</span>' +
+          '<span class="eq-main"><span class="eq-name">' + (card ? card.short : '— 空 —') + '</span>' +
+          '<span class="eq-meta">' + (card ? (card.room || '加密房间') : '仓库点房卡「装入」') + '</span></span>';
+        if (card) b.title = card.name + '（点击取回仓库）';
+        if (card) b.addEventListener('click', function() { pullCard(i); });
+        cpWrap.appendChild(b);
+      })(ci);
+    }
+    var cpHint = document.getElementById('cardpack-hint');
+    if (cpHint) cpHint.textContent = '卡包 ' + cardpackCount() + ' / ' + cpN + ' · 房卡只能装进卡包带进局内，刷卡后消耗（点击卡位取回仓库）';
+  }
   var w = currentWeapon(), g = gunStats(), gearGrid = document.getElementById('loadout-gear-grid');
   var stats = [
     { k:'生命上限', v:player.maxHp, up:player.maxHp > 100 },
@@ -3219,6 +3334,7 @@ function renderLoadout() {
     { k:'弹匣 / 射速', v:g.mag + ' / ' + g.fireGap.toFixed(2) + 's', up:!!w },
     { k:'精度', v:precisionOf(g) + ' · 射程 ' + g.range + 'm', up:!!w },
     { k:'安全箱', v:secureSlots() + ' 格保底', up:false },
+    { k:'卡包', v:(equip.cardpack ? equip.cardpack.name : '简易') + ' · ' + cardpackCount() + '/' + cardpackSlots(), up:cardpackSlots() > 2 },
     { k:'装备价值', v:'$' + gnum(gearValue()), up:!gearGateFail(selectedMap) }
   ];
   document.getElementById('loadout-stats').innerHTML = stats.map(function(s) {
@@ -3269,6 +3385,13 @@ function renderStash() {
       btn.textContent = '穿戴';
       btn.addEventListener('click', function() { equipItem(it); showToast('已装备：' + it.name); });
       card.appendChild(btn);
+    } else if (it.card) {
+      /* S1 W17.8：房卡 —— 装进卡包才能带进局内 */
+      var cb = document.createElement('button'); cb.type = 'button'; cb.className = 'ghost-btn price-btn';
+      cb.textContent = cardpackFree() >= 0 ? '装入卡包' : '卡包已满';
+      cb.disabled = cardpackFree() < 0;
+      cb.addEventListener('click', function() { stowCard(it); });
+      card.appendChild(cb);
     }
     // W6：安全箱是账号级保底装备，不能卖
     if (it.equip === 'safebox') {
@@ -3293,12 +3416,13 @@ function renderStash() {
 function renderShop() {
   var grid = document.getElementById('shop-grid'); grid.innerHTML = '';
   var list = [];
-  gearDefs.forEach(function(d) { list.push(d); });
+  gearDefs.forEach(function(d) { if (!d.hidden) list.push(d); });   /* S1 W17.8：简易卡包不上架 */
   /* S1：安全箱上架 —— 4 格 $1500 / 6 格 $10005 / 9 格 $40005（默认 2 格免费自带，不上架） */
   ITEM_DEFS.filter(function(d) { return d.equip === 'safebox' && d.shopOnly; }).forEach(function(d) { list.push(d); });
-  ['野战医疗包','战地急救箱','实验性药剂','加密房卡'].forEach(function(n) {
+  ['野战医疗包','战地急救箱','实验性药剂'].forEach(function(n) {
     list.push(ITEM_DEFS.filter(function(d) { return d.name === n; })[0]);
   });
+  KEYCARDS.forEach(function(d) { list.push(d); });   /* S1 W17.8：六种房卡全部上架 */
   list.forEach(function(def) {
     var probe = { name:def.name, value:def.value, rarity:def.rarity };
     var price = buyPrice(probe);
@@ -3307,7 +3431,7 @@ function renderShop() {
     card.innerHTML = itemIcon(def) +
       '<span class="shop-name"><span class="' + def.rarity + '-text">' + def.name + '</span></span>' +
       '<span class="shop-price">$' + price + '</span>' +
-      '<span class="shop-owned">' + (def.equip ? itemMetaText({ equip:def.equip, secure:def.secure || 0, armor:def.armor || 0, slotBonus:def.slotBonus || 0, heal:def.heal || 0, rarity:def.rarity }) : def.kind) + '</span>' +
+      '<span class="shop-owned">' + itemMetaText(def) + '</span>' +
       '<span class="shop-owned">已持有 ' + owned + '</span>';
     var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'buy-btn';
     btn.textContent = '购买';
@@ -3324,6 +3448,15 @@ function renderShop() {
         if (equip.safebox) stash.push(equip.safebox);
         equip.safebox = it; syncSecureSlots();
         msg += '（已装备，保底 ' + secureSlots() + ' 格）';
+      } else if (it.equip === 'cardpack') {
+        /* S1 W17.8：卡包买完直接装备；已有更大的卡包就不替换，放仓库备用 */
+        if (equip.cardpack && (equip.cardpack.cards || 0) >= (it.cards || 0)) {
+          stash.push(it); msg += '（现有卡包更大，已存入仓库）';
+        } else {
+          if (equip.cardpack) stash.push(equip.cardpack);
+          equip.cardpack = it; syncCardpackSlots();
+          msg += '（已装备，' + cardpackSlots() + ' 个卡位）';
+        }
       } else {
         stash.push(it);
       }
@@ -3549,7 +3682,22 @@ function safeBoxArt(sec) {
     '<path d="M32 35.2v3" stroke="#78350f" stroke-width="1.4"/>' + studs;
 }
 
-/* 枪械：按名称给不同轮廓（枪口朝右） */
+/* S1 W17.8：房卡 / 卡包图标 */
+function keyCardArt() {
+  return '<rect x="11" y="19" width="42" height="27" rx="4" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5"/>' +
+    '<rect x="16" y="24" width="15" height="11" rx="2" fill="#cbd5e1" fill-opacity=".6"/>' +
+    '<path d="M17 40h18" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"/>' +
+    '<circle cx="43" cy="35" r="4.2" fill="none" stroke="#fbbf24" stroke-width="1.6"/>' +
+    '<path d="M43 35v4" stroke="#fbbf24" stroke-width="1.6"/>';
+}
+function cardPackArt() {
+  return '<rect x="13" y="25" width="38" height="24" rx="3" fill="#334155" stroke="#a8b4c4" stroke-width="1.5"/>' +
+    '<path d="M13 34h38" stroke="#8fa3b8" stroke-width="1.2"/>' +
+    '<rect x="26" y="16" width="12" height="9" rx="2" fill="none" stroke="#a8b4c4" stroke-width="1.5"/>' +
+    '<rect x="19" y="39" width="10" height="7" rx="1.4" fill="#60a5fa" fill-opacity=".85"/>' +
+    '<rect x="33" y="39" width="10" height="7" rx="1.4" fill="#c084fc" fill-opacity=".85"/>';
+}
+
 function gunArt(name) {
   var n = name || '';
   if (n.indexOf('磁轨') >= 0) {
@@ -3680,6 +3828,8 @@ function kindArt(kind) {
     case '装备':   return '<path d="M20 16h24l6 8-4 24H18l-4-24z" fill="#3f4a5a" stroke="#94a3b8" stroke-width="1.4"/>';
     case '收藏品': return '<rect x="20" y="44" width="24" height="8" rx="2" fill="#b45309"/><circle cx="32" cy="26" r="11" fill="#fbbf24"/>';
     case '安全箱': return safeBoxArt(3);
+    case '卡包':   return cardPackArt();
+    case '房卡':   return keyCardArt();
     case '武器':   return gunArt('');
     case '护甲':   return armorArt('');
     case '头盔':   return helmetArt('');
@@ -3733,7 +3883,8 @@ function showDetail(it) {
   detail.innerHTML = itemIcon(it) +
     '<strong>' + it.name + '</strong><span class="rarity-text ' + it.rarity + '-text">' +
     RARITIES[it.rarity].name + '</span><br>' + it.kind + ' · 参考价值 $' + it.value + ' · 占用 1 格' +
-    (it.equip ? ' · 可装备到「' + slotName[it.equip] + '」' : '');
+    (it.equip ? ' · 可装备到「' + slotName[it.equip] + '」' : '') +
+    (it.card ? ' · 可装入卡包，刷开「' + (it.room || '加密房间') + '」' : '');
 }
 function updateDropState() {
   var sel = selectedItem ? slotsFor(selectedItem.source)[selectedItem.index] : null;
@@ -3744,10 +3895,12 @@ function updateDropState() {
   secureBtn.disabled = inSafe ? !sel : (!sel || selectedItem.source !== 'bag' || !secureSlots());
   /* W16.51：局内换装按钮 —— 背包/容器里可穿戴的装备都能直接换上 */
   if (equipBtn) {
+    var canPack = !!(sel && sel.card && selectedItem.source === 'bag');
     var canEquip = !!(sel && sel.equip && slotName[sel.equip] &&
       (selectedItem.source === 'bag' || selectedItem.source === 'container'));
-    equipBtn.disabled = !canEquip;
-    equipBtn.textContent = canEquip ? '装备' + slotName[sel.equip] : '装备';
+    equipBtn.disabled = !(canEquip || (canPack && cardpackFree() >= 0));
+    equipBtn.textContent = canPack ? (cardpackFree() >= 0 ? '装入卡包' : '卡包已满')
+      : (canEquip ? '装备' + slotName[sel.equip] : '装备');
   }
 }
 
@@ -3780,7 +3933,20 @@ function capIfEquip(key, it) {
 /* 把 source 第 index 格的可穿戴装备穿到身上，旧装备放回原格 */
 function equipFromSource(source, index) {
   var arr = slotsFor(source), it = arr && arr[index];
-  if (!it || !it.equip) return false;
+  if (!it) return false;
+  /* S1 W17.8：背包里的房卡可以直接塞进卡包空位（局内摸到卡能马上用） */
+  if (it.card) {
+    if (source !== 'bag') { showToast('先把房卡拿到背包里，再装进卡包'); return false; }
+    var cf = cardpackFree();
+    if (cf < 0) { showToast('卡包已满（' + cardpackSlots() + ' 格）· 回大厅换更大的卡包'); return false; }
+    arr[index] = null;
+    CARDPACK_SLOTS[cf] = it;
+    selectedItem = null; showDetail(null);
+    renderLoot(); saveGame(); sfx('open'); vib(10);
+    showToast('已装入卡包：' + it.name + '（' + cardpackCount() + '/' + cardpackSlots() + '）· 到房卡门按 F 刷卡');
+    return true;
+  }
+  if (!it.equip) return false;
   var key = it.equip;
   if (key === 'safebox') { showToast('安全箱要回大厅配装里更换'); return false; }
   if (key === 'med') { showToast('医疗品直接在战场上使用，不占装备格'); return false; }
@@ -4088,7 +4254,7 @@ bindTap(interactBtn, function() {
   /* 联机：靠近倒地队友时，交互键变成「救援」 */
   if (mpReviveTarget && !MP.downed) { return; }   // 按住时由 mpUpdateDown 推进进度
   if (nearestExtractionPoint) startExtraction(nearestExtractionPoint);
-  else if (nearestKeyDoor) tryOpenKeyRoom();
+  else if (nearestKeyDoor) tryOpenKeyRoom(nearestKeyDoor);
   else startSearch(nearestContainer);
 });
 /* 交互键按住状态（救人需要按住），触屏与鼠标都支持 */
@@ -4271,7 +4437,7 @@ addEventListener('keydown', function(e) {
     /* W16.10：撤离读条中再按 F → 取消撤离 */
     if (extraction) { cancelExtraction('已取消撤离'); return; }
     if (nearestExtractionPoint) startExtraction(nearestExtractionPoint);
-    else if (nearestKeyDoor) tryOpenKeyRoom();
+    else if (nearestKeyDoor) tryOpenKeyRoom(nearestKeyDoor);
     else startSearch(nearestContainer);
   }
 });
@@ -4751,7 +4917,7 @@ function startNewRun() {
   syncBagSize(false);
   mag = MAG_SIZE; reloadT = 0; fireCd = 0; shake = 0; muzzle = 0;
   bag.fill(null); RUN_BAG = [];
-  carryKeycards();   /* S1 W17.7：仓库里的房卡自动带进本局（最多 2 张） */
+  carryKeycards();   /* S1 W17.8：卡包里的房卡自动算进本局（房卡必须装卡包才能刷） */
   containers.forEach(function(c) { c.slots.fill(null); c.opened = false; });
   populateAIs();
   kills = 0; containersOpened = 0; itemsLooted = 0; deathCount = 0;
@@ -5414,10 +5580,20 @@ var AI_DISTRIBUTION = {
 };
 function zoneSpawnPos(zone, minDistFromPlayer) {
   var p, tries = 0;
+  function inKeyRoom(q) {                       /* S1 W17.8：别把 AI 刷进上锁的加密房间里 */
+    var plan = selectedMap && KEY_ROOM_PLANS[selectedMap.id];
+    if (!plan) return false;
+    for (var i = 0; i < plan.length; i++) {
+      var r = plan[i];
+      if (q.x > r.x - 40 && q.x < r.x + ROOM_W + 40 && q.y > r.y - 40 && q.y < r.y + ROOM_H + 40) return true;
+    }
+    return false;
+  }
   do {
     p = { x: zone.x + 90 + Math.random() * (zone.w - 180), y: zone.y + 90 + Math.random() * (zone.h - 180) };
     tries++;
-  } while ((hitWallFast(p.x, p.y, 34) || Math.hypot(p.x - player.x, p.y - player.y) < (minDistFromPlayer || 520)) && tries < 160);
+  } while ((hitWallFast(p.x, p.y, 34) || inKeyRoom(p) || Math.hypot(p.x - player.x, p.y - player.y) < (minDistFromPlayer || 520)) && tries < 160);
+  if (!hitWallFast(p.x, p.y, 34) && inKeyRoom(p)) return nudgeOutOfWall({ x: zone.x + zone.w / 2, y: zone.y + zone.h / 2 }, 26);  // 兜底
   return nudgeOutOfWall(p, 26);
 }
 var AI_SEQ = 0;
@@ -5878,11 +6054,13 @@ function update(dt) {
     var cd = Math.hypot(containers[ci].x - player.x, containers[ci].y - player.y);
     if (cd < nearD) { nearD = cd; nearestContainer = containers[ci]; }
   }
-  /* S1 W17.7：加密房门的就近检测 */
+  /* S1 W17.8：附近所有上锁房卡门里挑最近的一扇 */
   nearestKeyDoor = null;
-  if (keyRoomDoor) {
-    var kdcx = keyRoomDoor.x + keyRoomDoor.w / 2, kdcy = keyRoomDoor.y + keyRoomDoor.h / 2;
-    if (Math.hypot(kdcx - player.x, kdcy - player.y) < 96) nearestKeyDoor = keyRoomDoor;
+  var kdBest = 96;
+  for (var kdi = 0; kdi < keyRoomDoors.length; kdi++) {
+    var kd = keyRoomDoors[kdi];
+    var kdd = Math.hypot(kd.x + kd.w / 2 - player.x, kd.y + kd.h / 2 - player.y);
+    if (kdd < kdBest) { kdBest = kdd; nearestKeyDoor = kd; }
   }
   updateSearch(dt); updateExtraction(dt);
   shield = Math.min(shield, armorValue() * ARMOR_PER_POINT);
@@ -5893,7 +6071,10 @@ function update(dt) {
   if (extraction) { interactBtn.textContent = '取消撤离 F'; interactBtn.disabled = false; }
   else if (nearestExtractionPoint) interactBtn.textContent = '撤离 ' + nearestExtractionPoint.name + ' F';
   else if (nearestKeyDoor) {
-    interactBtn.textContent = (keycardSlot() >= 0 ? '刷卡开门 F' : '需要加密房卡 F');
+    var kdHas = cardForDoor(nearestKeyDoor) >= 0;
+    interactBtn.textContent = kdHas
+      ? ('刷卡开「' + nearestKeyDoor.name + '」F')
+      : ('需要' + ((CARD_BY_KEY[nearestKeyDoor.card] || {}).name || '房卡') + ' F');
     interactBtn.disabled = false;
   }
   else if (nearestContainer) {
@@ -6009,22 +6190,22 @@ function render() {
   for (var wi = 0; wi < walls.length; wi++) ctx.rect(walls[wi].x, walls[wi].y, walls[wi].w, walls[wi].h);
   ctx.stroke();
 
-  /* S1 W17.7：加密房间 —— 地面提示 + 黄色房卡门 */
-  if (selectedMap && KEY_ROOMS[selectedMap.id]) {
-    var krm = KEY_ROOMS[selectedMap.id].room;
+  /* S1 W17.8：加密房间 —— 地面提示 + 按房卡品质上色的门板 */
+  for (var kri = 0; kri < keyRoomDoors.length; kri++) {
+    var kdm = keyRoomDoors[kri], krm = kdm.room;
+    var kcol = (RARITIES[(CARD_BY_KEY[kdm.card] || {}).rarity] || RARITIES.common).color;
     ctx.fillStyle = 'rgba(250,204,21,.05)';
     ctx.fillRect(krm.x, krm.y, krm.w, krm.h);
-    ctx.strokeStyle = 'rgba(250,204,21,.30)'; ctx.lineWidth = 1.5; ctx.setLineDash([10, 8]);
+    ctx.strokeStyle = 'rgba(250,204,21,.26)'; ctx.lineWidth = 1.5; ctx.setLineDash([10, 8]);
     ctx.strokeRect(krm.x + 6, krm.y + 6, krm.w - 12, krm.h - 12); ctx.setLineDash([]);
-  }
-  if (keyRoomDoor) {
-    ctx.fillStyle = '#ca8a04';
-    ctx.fillRect(keyRoomDoor.x, keyRoomDoor.y, keyRoomDoor.w, keyRoomDoor.h);
-    ctx.strokeStyle = '#fde047'; ctx.lineWidth = 2;
-    ctx.strokeRect(keyRoomDoor.x - 1, keyRoomDoor.y - 1, keyRoomDoor.w + 2, keyRoomDoor.h + 2);
+    ctx.fillStyle = '#a16207';
+    ctx.fillRect(kdm.x, kdm.y, kdm.w, kdm.h);
+    ctx.strokeStyle = kcol; ctx.lineWidth = 2;
+    ctx.strokeRect(kdm.x - 1, kdm.y - 1, kdm.w + 2, kdm.h + 2);
     ctx.textAlign = 'center'; ctx.font = 'bold 12px ui-monospace, "Noto Sans Mono CJK SC", monospace';
-    ctx.fillStyle = '#fde047';
-    ctx.fillText('🔒 房卡门', keyRoomDoor.x + keyRoomDoor.w / 2, keyRoomDoor.y - 12);
+    ctx.fillStyle = kcol;
+    var kdLow = kdm.y > krm.y + krm.h / 2;
+    ctx.fillText('🔒 ' + kdm.name, kdm.x + kdm.w / 2, kdLow ? kdm.y + kdm.h + 18 : kdm.y - 12);
   }
 
   /* 撤离区 */
@@ -6454,10 +6635,11 @@ function paintMap(g, baseX, baseY, k, isFull) {
     var w = walls[i];
     g.fillRect(w.x * k, w.y * k, Math.max(1, w.w * k), Math.max(1, w.h * k));
   }
-  /* S1 W17.7：加密房门（小地图上也用黄色标出） */
-  if (keyRoomDoor) {
-    g.fillStyle = '#facc15';
-    g.fillRect(keyRoomDoor.x * k - 1, keyRoomDoor.y * k - 1, Math.max(2, keyRoomDoor.w * k + 2), Math.max(2, keyRoomDoor.h * k + 2));
+  /* S1 W17.8：加密房门（小地图按房卡品质上色） */
+  for (var kdj = 0; kdj < keyRoomDoors.length; kdj++) {
+    var kdmm = keyRoomDoors[kdj];
+    g.fillStyle = (RARITIES[(CARD_BY_KEY[kdmm.card] || {}).rarity] || RARITIES.common).color;
+    g.fillRect(kdmm.x * k - 1, kdmm.y * k - 1, Math.max(2, kdmm.w * k + 2), Math.max(2, kdmm.h * k + 2));
   }
   /* 容器（仅全屏显示，小地图保持干净） */
   if (isFull) {
@@ -6630,16 +6812,46 @@ var MAP_PLANS = {
    各图再拆掉几处不同掩体、盖上自己的专属建筑（坐标离线验证：离墙≥55 / 离物资点≥85 / 离撤离点≥150）。
    撤离点、分区、物资布点跟随同样变换，保证整张图是「另一张图」而不是换色。 */
 var MAP_WALL_SETS = {};
-/* S1 W17.7：房卡加密房间 —— 三张图分别落在不同角落，坐标离线验证过（离墙≥40、房间内无原有墙） */
-var KEY_ROOMS = {
-  radar:      { room:{ x:2620, y:1660, w:300, h:260 }, door:{ x:2620, y:1760, w:30, h:100 },
-                loot:[[2760,1740,'safe'],[2820,1840,'weapon']] },   /* 右下角 · 门朝左 */
-  industrial: { room:{ x:280,  y:1660, w:300, h:260 }, door:{ x:550,  y:1760, w:30, h:100 },
-                loot:[[440,1740,'safe'],[380,1840,'weapon']] },     /* 左下角 · 门朝右 */
-  port:       { room:{ x:60,   y:460,  w:300, h:260 }, door:{ x:330,  y:557,  w:30, h:100 },
-                loot:[[200,575,'safe'],[285,655,'weapon']] }       /* 左侧围墙边 · 门朝右 */
+/* S1 W17.8：房卡加密房间 —— 每张图 6 个，全部贴地图边缘 / 墙角（不占现有地图内部布点）。
+   六种房卡（白/绿/蓝/紫/金/红）各对应一种房间，越贵的房卡房内物资越多。
+   坐标离线验证：不与任何墙体重叠 / 房间内无原有墙 / 门外可站 / 离物资点≥72 / 离撤离点≥150 */
+var ROOM_W = 280, ROOM_H = 220, ROOM_T = 30, ROOM_DOOR = 100;
+var KEY_ROOM_PLANS = {
+  radar: [
+    { card:'supply',  x:840,  y:60,   side:'bottom' },
+    { card:'medical', x:1500, y:60,   side:'bottom' },
+    { card:'weapon',  x:2860, y:1320, side:'top'    },
+    { card:'intel',   x:1130, y:1720, side:'top'    },
+    { card:'studio',  x:60,   y:1380, side:'top'    },
+    { card:'origin',  x:2710, y:1720, side:'top'    }
+  ],
+  industrial: [
+    { card:'supply',  x:1480, y:60,   side:'bottom' },
+    { card:'medical', x:2040, y:60,   side:'bottom' },
+    { card:'weapon',  x:2860, y:1330, side:'top'    },
+    { card:'intel',   x:1020, y:1720, side:'top'    },
+    { card:'studio',  x:240,  y:1680, side:'top'    },
+    { card:'origin',  x:2860, y:1720, side:'top'    }
+  ],
+  port: [
+    { card:'supply',  x:760,  y:190,  side:'bottom' },
+    { card:'medical', x:1630, y:60,   side:'bottom' },
+    { card:'weapon',  x:2860, y:320,  side:'bottom' },
+    { card:'intel',   x:1670, y:1720, side:'top'    },
+    { card:'studio',  x:60,   y:460,  side:'bottom' },
+    { card:'origin',  x:2080, y:1720, side:'top'    }
+  ]
 };
-var keyRoomDoor = null;    /* 本局还没刷开的门（可交互） */
+/* 房内物资（相对房间左上角的偏移）—— 品质越高箱子越多越值钱 */
+var ROOM_LOOT = {
+  supply:  [[70,100,'supply'], [185,100,'supply']],
+  medical: [[62,100,'medical'], [140,100,'medical'], [218,100,'supply']],
+  weapon:  [[62,100,'weapon'],  [140,100,'weapon'],  [218,100,'safe']],
+  intel:   [[62,100,'safe'],    [140,100,'safe'],    [218,100,'medical']],
+  studio:  [[90,80,'safe'],     [200,80,'safe'],     [90,150,'safe'], [200,150,'weapon']],
+  origin:  [[90,80,'safe'],     [200,80,'safe'],     [90,150,'safe'], [200,150,'safe']]
+};
+var keyRoomDoors = [];     /* 本局所有还没刷开的房卡门（可交互） */
 (function () {
   var KIND = { radar:'I', industrial:'MX', port:'R180' };
   var REMOVE = { radar:['1180,180','1600,1620'], industrial:['1440,700','300,1700'], port:['1180,180','1340,1560','900,1180'] };
@@ -6705,56 +6917,70 @@ function loadMap(map) {
   loadKeyRoom(map.id);
   buildWallGrid();   /* S1 W17.7：换图后重建碰撞网格（修复此前一直拿雷达站墙体做碰撞的 bug） */
 }
-/* S1 W17.7：把加密房间的墙拼出来，并在门的位置留一个可交互的门板 */
+/* S1 W17.8：把每张图的 6 个加密房间拼出来 —— 三面实墙 + 一面留门洞（门板可刷卡开启） */
 function loadKeyRoom(id) {
-  keyRoomDoor = null;
-  var R = KEY_ROOMS[id];
-  if (!R) return;
-  var r = R.room, d = R.door, t = 30;
-  function seg(x, y, w, h) { if (w > 0 && h > 0) walls.push({ x:x, y:y, w:w, h:h }); }
-  var onLeft = d.x <= r.x + 1, onRight = d.x + d.w >= r.x + r.w - 1;
-  var onTop = d.y <= r.y + 1, onBottom = d.y + d.h >= r.y + r.h - 1;
-  if (onTop) { seg(r.x, r.y, d.x - r.x, t); seg(d.x + d.w, r.y, r.x + r.w - d.x - d.w, t); }
-  else seg(r.x, r.y, r.w, t);
-  if (onBottom) { seg(r.x, r.y + r.h - t, d.x - r.x, t); seg(d.x + d.w, r.y + r.h - t, r.x + r.w - d.x - d.w, t); }
-  else seg(r.x, r.y + r.h - t, r.w, t);
-  if (onLeft) { seg(r.x, r.y, t, d.y - r.y); seg(r.x, d.y + d.h, t, r.y + r.h - d.y - d.h); }
-  else seg(r.x, r.y, t, r.h);
-  if (onRight) { seg(r.x + r.w - t, r.y, t, d.y - r.y); seg(r.x + r.w - t, d.y + d.h, t, r.y + r.h - d.y - d.h); }
-  else seg(r.x + r.w - t, r.y, t, r.h);
-  keyRoomDoor = { x:d.x, y:d.y, w:d.w, h:d.h };
-  walls.push(keyRoomDoor);
-  R.loot.forEach(function(l) { containers.push(makeContainer(l[0], l[1], l[2])); });
+  keyRoomDoors = [];
+  var plan = KEY_ROOM_PLANS[id];
+  if (!plan) return;
+  plan.forEach(function (p) {
+    var r = { x:p.x, y:p.y, w:ROOM_W, h:ROOM_H }, t = ROOM_T;
+    var dx = r.x + Math.round((r.w - ROOM_DOOR) / 2);
+    var d = p.side === 'top'
+      ? { x:dx, y:r.y, w:ROOM_DOOR, h:t }
+      : { x:dx, y:r.y + r.h - t, w:ROOM_DOOR, h:t };
+    function seg(x, y, w, h) { if (w > 0 && h > 0) walls.push({ x:x, y:y, w:w, h:h }); }
+    if (p.side === 'top') {
+      seg(r.x, r.y + r.h - t, r.w, t);                              /* 下 */
+      seg(r.x, r.y, t, r.h);                                        /* 左 */
+      seg(r.x + r.w - t, r.y, t, r.h);                              /* 右 */
+      seg(r.x, r.y, dx - r.x, t);                                   /* 上·左段 */
+      seg(dx + ROOM_DOOR, r.y, r.x + r.w - dx - ROOM_DOOR, t);       /* 上·右段 */
+    } else {
+      seg(r.x, r.y, r.w, t);                                        /* 上 */
+      seg(r.x, r.y, t, r.h);                                        /* 左 */
+      seg(r.x + r.w - t, r.y, t, r.h);                              /* 右 */
+      seg(r.x, r.y + r.h - t, dx - r.x, t);                         /* 下·左段 */
+      seg(dx + ROOM_DOOR, r.y + r.h - t, r.x + r.w - dx - ROOM_DOOR, t);
+    }
+    var wall = { x:d.x, y:d.y, w:d.w, h:d.h };
+    walls.push(wall);
+    var name = (CARD_BY_KEY[p.card] || {}).room || '加密房间';
+    keyRoomDoors.push({ x:d.x, y:d.y, w:d.w, h:d.h, card:p.card, name:name, room:r, wall:wall, opened:false });
+    (ROOM_LOOT[p.card] || []).forEach(function (l) {
+      containers.push(makeContainer(r.x + l[0], r.y + l[1], l[2]));
+    });
+  });
 }
-/* 房卡：包里有没有 / 仓库里的房卡开局自动带上（最多 2 张） */
-function keycardSlot() {
-  for (var i = 0; i < bag.length; i++) { var it = bag[i]; if (it && it.name === '加密房卡') return i; }
+/* S1 W17.8：房卡必须装在「卡包」里才能刷 —— 卡包槽位里找对应这张门的卡 */
+function cardForDoor(door) {
+  if (!door) return -1;
+  for (var i = 0; i < CARDPACK_SLOTS.length; i++) {
+    var it = CARDPACK_SLOTS[i];
+    if (it && it.card === door.card) return i;
+  }
   return -1;
 }
-function carryKeycards() {
-  var n = 0;
-  for (var i = stash.length - 1; i >= 0 && n < 2; i--) {
-    if (stash[i] && stash[i].name === '加密房卡') {
-      var slot = bag.indexOf(null);
-      if (slot < 0) break;
-      bag[slot] = stash[i]; stash.splice(i, 1); n++;
-    }
-  }
-  if (n) { saveGame(); renderStash(); }
-}
-function tryOpenKeyRoom() {
-  if (!keyRoomDoor || player.dead || runEnded || extraction) return;
-  var idx = keycardSlot();
-  if (idx < 0) {
-    showToast('房门上锁 · 需要「加密房卡」——地图搜刮有机会摸到，商店 $' + Math.round(KEYCARD_DEF.value * BUY_RATE) + ' 有售');
+/* 房卡改由卡包携带（装备即生效），不再从仓库自动装包 */
+function carryKeycards() { ensureCardpack(); }
+function tryOpenKeyRoom(door) {
+  door = door || nearestKeyDoor;
+  if (!door || player.dead || runEnded || extraction) return;
+  var def = CARD_BY_KEY[door.card];
+  var ci = cardForDoor(door);
+  if (ci < 0) {
+    showToast('「' + door.name + '」需要 ' + (def ? def.name : '房卡') + ' —— 要装进卡包才能刷；地图搜刮有机会摸到，商店 $' +
+      (def ? Math.round(def.value * BUY_RATE) : '?') + ' 有售');
     return;
   }
-  bag[idx] = null;
-  var d = keyRoomDoor;
-  walls = walls.filter(function(w) { return w !== d; });
-  keyRoomDoor = null;
+  CARDPACK_SLOTS[ci] = null;                    /* 刷卡消耗一张 */
+  walls = walls.filter(function (w) { return w !== door.wall; });
+  door.opened = true;
+  var k = keyRoomDoors.indexOf(door);
+  if (k >= 0) keyRoomDoors.splice(k, 1);
+  nearestKeyDoor = null;
   buildWallGrid();
-  showToast('刷卡成功 · 加密房间已开启');
+  showToast('刷卡成功 · 「' + door.name + '」已开启（消耗 ' + (def ? def.name : '房卡') + '）');
+  saveGame();
   if (lootOpen) renderLoot();
 }
 function inMenu() { return document.body.classList.contains('in-menu'); }
@@ -7710,7 +7936,8 @@ var S1_ROADMAP = [
   { id: 2, name: '保险箱扩容',   status: 'done' },
   { id: 3, name: '房卡房间',     status: 'done' },
   { id: 4, name: '头盔',         status: 'done' },
-  { id: 5, name: '六品质体系',   status: 'done' }
+  { id: 5, name: '六品质体系',   status: 'plan' },
+  { id: 6, name: '卡包系统',     status: 'done' }
 ];
 var S1_LAUNCH = '2026-11-30';   // 上线日期（周一）
 
@@ -11298,6 +11525,13 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.8', t:'2026年11月25日 20:10', items:[
+    { k:'新增', d:'房卡扩容到六种：补给间房卡（白）/ 医疗房卡（绿）/ 军械房卡（蓝）/ 情报房卡（紫）/ 工作室房卡（金）/ 起源房卡（红），价格从 $405 到 $43200，越贵房内物资越多（高级房 4 个箱子全是保险箱+武器箱）' },
+    { k:'新增', d:'每张地图 6 个加密房间，全部贴地图边缘/墙角布置（不再占用图内布点），小地图按房卡品质上色标注' },
+    { k:'新增', d:'卡包系统：房卡必须装进卡包才能刷卡进房（不占背包）。默认 2 格，商店可买战术卡包（4 格 $12000）/ 重型卡包（6 格 $45000）' },
+    { k:'调整', d:'房卡掉落分池：补给箱出补给/医疗卡，武器箱出军械/情报卡，保险箱才有机会出工作室/起源卡；局内捡到卡可直接塞进卡包，当场刷卡' },
+    { k:'兼容', d:'旧版「加密房卡」自动升级为「情报房卡」，旧存档不用手动处理' }
+  ]},
   { v:'W17.7', t:'2026年11月25日 18:55', items:[
     { k:'新增', d:'房卡加密房间：每张图的隐蔽位置各有一个上锁房间（雷达站右下 / 工业区左下 / 港口西侧围墙边），靠近门按 F 刷「加密房卡」开门，房内是加密保险箱 + 军用武器箱' },
     { k:'新增', d:'加密房卡：搜刮补给箱/武器箱/保险箱有机会摸到（保险箱概率最高），商店 $2025 有售；仓库里的房卡开局自动带进战局（最多 2 张）' },
