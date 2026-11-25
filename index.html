@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W16.94 2026-11-25 19:05';
+  var BUILD = 'W16.95 2026-11-25 22:30';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -970,6 +970,10 @@
   .fr-nm small { display:block; font-size:11px; color:#5f8296; margin-top:2px; }
   .fr-badge { flex:0 0 auto; min-width:19px; height:19px; padding:0 6px; border-radius:10px;
     background:#dc2626; color:#fff; font-size:11px; line-height:19px; text-align:center; font-weight:700; }
+  .fr-online { flex:0 0 auto; margin-left:auto; padding:3px 9px; border-radius:9px;
+    border:1px solid #2b3a4d; color:#6b7d90; font-size:11px; font-weight:700; }
+  .fr-online.on { border-color:rgba(74,222,128,.45); background:rgba(74,222,128,.12); color:#4ade80; }
+  #fr-chat-on { margin-left:8px; }
   .fr-add { flex:0 0 auto; padding:8px 15px; border-radius:8px; border:1px solid #2f6f8f;
     background:rgba(0,120,180,.14); color:#7dc8f0; font-size:13px; cursor:pointer; font-family:inherit; }
   .fr-add:active { background:rgba(0,140,210,.35); }
@@ -7492,6 +7496,36 @@ function frLoadFriends() {
       });
   }).catch(function() { frFriends = []; return []; });
 }
+/* ---- 好友在线状态：心跳 + 查询（无需新表新列）----
+   每个登录的客户端每 45 秒把云存档行的 updated_at 顶到当前时间（心跳）；
+   好友列表拉对方的 updated_at，90 秒内有心跳就判定在线。 */
+var frOnline = {};                                   // uid -> 最后心跳时间(ms)
+function frHeartbeat() {
+  if (!sbSess || document.hidden) return;
+  sbAuth().then(function(h) {
+    var hh = {}; for (var k in h) hh[k] = h[k];
+    hh['Prefer'] = 'resolution=merge-duplicates,return=minimal';
+    return sbApi('/rest/v1/saves?on_conflict=user_id', { method: 'POST', headers: hh,
+      body: JSON.stringify({ user_id: frMe(), updated_at: new Date().toISOString() }) });
+  }).catch(function() {});
+}
+setInterval(frHeartbeat, 45000);
+function frLoadOnline() {
+  if (!sbSess || !frFriends.length) { frOnline = {}; return Promise.resolve(); }
+  var ids = frFriends.map(function(f) { return f.id; });
+  return sbApi('/rest/v1/saves?select=user_id,updated_at&user_id=in.(' + ids.join(',') + ')', {})
+    .then(function(rows) {
+      frOnline = {};
+      (rows || []).forEach(function(r) {
+        var t = new Date(r.updated_at).getTime();
+        if (t) frOnline[r.user_id] = t;
+      });
+    }).catch(function() {});
+}
+function frIsOnline(uid) {
+  var t = frOnline[uid];
+  return !!t && (Date.now() - t) < 90000;            // 90 秒内有心跳 = 在线
+}
 /* 开发/测试账号黑名单：只从「添加好友」列表里隐藏，账号本体和云存档不动。
    以后再有测试号，把它的 user_id 加进这个数组即可。 */
 var FR_HIDDEN_IDS = [
@@ -7681,6 +7715,7 @@ function frPollStart() {
     if (!sbSess) { clearInterval(frPollT); return; }
     if (document.hidden) return;
     frPullNew();
+    frLoadOnline().then(frRenderList);              // 顺带刷新好友在线状态
   }, 8000);
 }
 function frPullNew() {
@@ -7742,6 +7777,10 @@ function frRenderList() {
     var nm = document.createElement('div'); nm.className = 'fr-nm'; nm.textContent = u.nick;
     row.appendChild(av); row.appendChild(nm);
     if (frTab === 'friends') {
+      var on = frIsOnline(u.id);
+      var dot = document.createElement('span'); dot.className = 'fr-online' + (on ? ' on' : '');
+      dot.textContent = on ? '在线' : '离线';
+      row.appendChild(dot);
       var n = frUnread[u.id] || 0;
       if (n) { var b = document.createElement('span'); b.className = 'fr-badge'; b.textContent = n > 99 ? '99+' : n; row.appendChild(b); }
       row.addEventListener('click', function() { frOpenChat(u); });
@@ -7768,6 +7807,9 @@ function frOpenChat(u) {
   document.getElementById('fr-input-row').style.display = 'flex';
   setAvatarEl(document.getElementById('fr-chat-av'), u.nick);
   document.getElementById('fr-chat-nm').textContent = u.nick;
+  var chOn = frIsOnline(u.id);
+  var chTag = document.getElementById('fr-chat-on');
+  if (chTag) { chTag.textContent = chOn ? '在线' : '离线'; chTag.className = 'fr-online' + (chOn ? ' on' : ''); }
   document.getElementById('fr-msgs').innerHTML = '<div class="fr-empty">加载中…</div>';
   frRenderList();
   frLoadMsgs(u.id).then(frRenderMsgs);
@@ -7826,7 +7868,7 @@ function frOpen() {
   frMsg('');
   if (!sbSess) { frRender(); return; }
   frRender();
-  frLoadFriends().then(function() { frRenderList(); frInitRealtime(); frPollStart(); });
+  frLoadFriends().then(function() { frRenderList(); frInitRealtime(); frPollStart(); frHeartbeat(); frLoadOnline().then(frRenderList); });
 }
 function frClose() {
   var ov = document.getElementById('fr-overlay');
@@ -10099,7 +10141,7 @@ addEventListener('keydown', function(e) {
         <div class="fr-chathead" id="fr-chathead" style="display:none">
           <button class="fr-back" id="fr-back" type="button">‹ 返回</button>
           <span class="fr-av" id="fr-chat-av"></span>
-          <span id="fr-chat-nm"></span>
+          <span id="fr-chat-nm"></span><span id="fr-chat-on" class="fr-online"></span>
         </div>
         <div class="fr-msgs" id="fr-msgs"></div>
         <div class="fr-empty" id="fr-chat-empty"><b>选择一位好友</b><span>从左侧列表点一个名字开始聊天</span></div>
@@ -10996,6 +11038,9 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W16.95', t:'2026年11月25日 22:30', items:[
+    { k:'新增', d:'好友列表显示在线状态：绿标「在线」/ 灰标「离线」，聊天窗口顶部同步显示；在线判定 = 90 秒内在游戏中（自动心跳，无需好友操作）' },
+  ]},
   { v:'W16.94', t:'2026年11月25日 19:05', items:[
     { k:'调整', d:'正式服榜单与玩家列表与测试服彻底分开：S1 测试号不再出现在正式服排行榜和好友列表' },
     { k:'新增', d:'彦祖是我 → 副策划徽标 + 开发者免口令' }
