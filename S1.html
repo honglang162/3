@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.3 2026-11-25 00:35';
+  var BUILD = 'W17.4 2026-11-25 13:05';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1545,7 +1545,6 @@
         <span class="result" id="settlement-result">EXTRACTION COMPLETE</span>
         <h1 id="settlement-title">撤离成功</h1>
         <p id="settlement-sub">战利品已转入仓库，回到主界面调整配装后再次出发。</p>
-        <p id="settlement-xp" class="settlement-xp"></p>
         <p id="settlement-loss" class="settlement-loss" hidden></p>
       </div>
       <button id="settlement-close" class="close-btn" type="button" aria-label="关闭结算面板">关闭</button>
@@ -1606,9 +1605,8 @@
       <div class="profile-card">
         <div class="avatar" id="player-avatar">干员</div>
         <div>
-          <div class="p-name"><span id="player-name">指挥官 </span><span class="lv" id="player-level">Lv.1</span></div>
-          <div class="p-xp"><div class="xp-bar"><i id="xp-fill"></i></div><span id="xp-text">0 / 125 EXP</span></div>
-          <div class="p-money"><small>金币</small><span id="start-money">$0</span></div>
+          <div class="p-name"><span id="player-name">指挥官 </span></div>
+                    <div class="p-money"><small>金币</small><span id="start-money">$0</span></div>
           <div class="p-stat">撤离 <span id="start-extracts">0</span> 次 · 击杀 <span id="start-kills">0</span></div>
           <button id="acct-btn" class="acct-btn" type="button"><i class="dot"></i><span id="acct-btn-txt">游客 · 登录</span></button>
         </div>
@@ -1630,9 +1628,9 @@
           </div>
         </button>
         <div class="map-grid" id="map-grid">
-          <button class="map-mini" type="button" data-map="0">山地雷达站<br>低风险 · Lv.1</button>
-          <button class="map-mini" type="button" data-map="1">废弃工业区<br>中风险 · Lv.20</button>
-          <button class="map-mini" type="button" data-map="2">港口仓储区<br>超高风险 · Lv.40</button>
+          <button class="map-mini" type="button" data-map="0">山地雷达站<br>低风险</button>
+          <button class="map-mini" type="button" data-map="1">废弃工业区<br>中风险</button>
+          <button class="map-mini" type="button" data-map="2">港口仓储区<br>超高风险</button>
         </div>
       </section>
 
@@ -2280,12 +2278,9 @@ var STAR_ITEM = ITEM_DEFS.filter(function(d) { return d.name === '东洲之星';
    等级 1~60，靠每局结算经验升级。三张地图对应三个等级门槛：
      山地雷达站（低风险）Lv.1 → 废弃工业区（中风险）Lv.20 → 港口仓储区（超高风险）Lv.40
    经验 = 撤离基础 + 击杀 + 带出价值 + 行动时长，再乘地图风险系数。 */
-var LEVEL_CAP = 60;
 var RISK_XP = { '低风险':0.9, '中风险':1, '超高风险':1.3 };
 function riskXpMul(map) { return RISK_XP[(map && map.risk) || '中风险'] || 1; }
 var playerXp = 0, savedMapId = null;
-function mapMinLv(map) { return (map && map.minLv) || 1; }
-function mapLocked(map) { return playerLevel() < mapMinLv(map); }
 /* W16.32：配装价值门槛 —— 只算主战装备（武器 + 护甲），限制带多好的枪甲进图 */
 function gearValue() {
   var sum = 0, keys = ['weapon', 'armor', 'helmet', 'pack', 'rig'];   // S1：头盔计入装备价值
@@ -2309,14 +2304,6 @@ function gearGateFail(map) {
   if (mn && v < mn) return '装备太便宜 · ' + map.name + '要求 ≥ $' + gnum(mn) + '（当前 $' + gnum(v) + '），先升级配装';
   return '';
 }
-/* 升到下一级所需经验：前期快、后期慢（1→2 级 125，39→40 级 1835） */
-function xpNeed(lv) { return 80 + Math.max(1, lv) * 45; }
-function levelFromXp(xp) {
-  var lv = 1, left = Math.max(0, xp | 0);
-  while (lv < LEVEL_CAP && left >= xpNeed(lv)) { left -= xpNeed(lv); lv++; }
-  return { lv:lv, cur:left, need:xpNeed(lv) };
-}
-function playerLevel() { return levelFromXp(playerXp).lv; }
 /* 每局经验结算（倍率取当前地图风险） */
 function calcRunXp(ok, k, lootValue, ms) {
   var mul = riskXpMul(selectedMap);
@@ -2326,14 +2313,7 @@ function calcRunXp(ok, k, lootValue, ms) {
   var timeXp = Math.min(ok ? 100 : 40, Math.floor((ms || 0) / 60000) * (ok ? 10 : 5));
   return Math.round((base + killXp + lootXp + timeXp) * mul);
 }
-function addXp(n) {
-  var before = playerLevel();
-  playerXp = Math.max(0, playerXp + Math.round(n));
-  var after = playerLevel();
-  var unlocked = [];
-  MAPS.forEach(function(m) { if ((m.minLv || 1) > before && (m.minLv || 1) <= after) unlocked.push(m); });
-  return { before:before, after:after, gained:Math.round(n), leveled:after > before, unlocked:unlocked };
-}
+function addXp(n) { return { before:0, after:0, gained:0, leveled:false, unlocked:[] }; }   /* W17.4：等级已移除，空壳兼容旧调用 */
 
 var STAR_CHANCE = 0.0025;      // 基准概率（实际按所选地图的 starChance 计算）
 var itemSerial = 1;
@@ -2958,7 +2938,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initBgm();
 
 /* ============ W5：仓库、买卖、配装、localStorage 存档 ============ */
-var SAVE_KEY = 'extractionW6.save.v2', SAVE_VER = 2;   // W6：新存档结构（安全箱）
+var SAVE_KEY = 'extractionS1.save.v1', SAVE_VER = 2;   // S1：测试服独立本地存档   // W6：新存档结构（安全箱）
 var equip = { weapon:null, armor:null, pack:null, rig:null, med:null, helmet:null, safebox:null };  // 装备实例（S1 增加头盔）
 /* W6.3：安全箱两格存放在 SECURE_SLOTS（见上方定义），死亡也不掉落 */
 var stash = [], money = 4500, totalRuns = 0, totalExtracts = 0, totalKills = 0, kindStats = {};
@@ -4393,19 +4373,6 @@ function renderSettlement(items, point, opts) {
   for (var li = 0; li < labels.length && li < set.length; li++) labels[li].textContent = set[li];
   var runTime = formatRunTime(performance.now() - runStart);
   var mapName = selectedMap ? selectedMap.name : '废弃工业区';
-  /* W16.21：本局经验与升级提示 */
-  var xpEl = document.getElementById('settlement-xp');
-  if (xpEl) {
-    if (lastXpResult) {
-      var uTxt = lastXpResult.unlocked.map(function(d) { return '「' + d.name + '」'; }).join('');
-      xpEl.innerHTML = '经验 <b>+' + lastXpResult.gained + '</b> EXP · ' +
-        (lastXpResult.leveled
-          ? ('Lv.' + lastXpResult.before + ' → <b>Lv.' + lastXpResult.after + '</b>')
-          : ('Lv.' + lastXpResult.before)) +
-        (uTxt ? ' · <i>解锁新区域 ' + uTxt + '</i>' : '');
-      xpEl.hidden = false;
-    } else { xpEl.textContent = ''; xpEl.hidden = true; }
-  }
   list.innerHTML = '';
 
   if (opts.failed) {
@@ -6647,17 +6614,17 @@ var MAP_WALL_SETS = {};
 })();
 var MAPS = [
   /* W16.22：顺序即等级门槛顺序——低风险 → 中风险 → 超高风险 */
-  { id:'radar', name:'山地雷达站', minLv:1, gearMax:7000, unlocked:true, size:'3200 × 2000',
+  { id:'radar', name:'山地雷达站', gearMax:7000, unlocked:true, size:'3200 × 2000',
     risk:'低风险', lootLabel:'爆率较低', starChance:0.001, aiDiff:0.75,
     aiDist:{ factory:{scav:6,pmc:1,sniper:0}, depot:{scav:3,pmc:1,sniper:0}, airport:{scav:3,pmc:1,sniper:0} },
     lootMul:{ common:1.8, uncommon:1.4, rare:0.7, epic:0.5, legendary:0.4, mythic:0.3 },   /* W16.85：爆率上调 */
     desc:'废弃的高山雷达站，AI 弱化 25%，只有零散拾荒者游荡。适合新手熟悉操作，攒第一桶金。' },
-  { id:'industrial', name:'废弃工业区', minLv:20, gearMin:500, gearMax:25000, unlocked:true, size:'3200 × 2000',
+  { id:'industrial', name:'废弃工业区', gearMin:500, gearMax:25000, unlocked:true, size:'3200 × 2000',
     risk:'中风险', lootLabel:'爆率中等', starChance:0.001, aiDiff:1,
     lootMul:{ common:1.3, uncommon:1.2, rare:1.2, epic:1.25, legendary:1.2, mythic:1.15 },   /* W16.85：爆率上调 */
     aiDist:{ factory:{scav:5,pmc:1,sniper:1}, depot:{scav:2,pmc:4,sniper:0}, airport:{scav:2,pmc:1,sniper:2} },
     desc:'厂区、仓库区、机场三大片区连通。厂区多拾荒者、仓库区有雇佣兵小队、机场制高点蹲着狙击手。' },
-  { id:'port', name:'港口仓储区', minLv:40, gearMin:25000, unlocked:true, size:'3200 × 2000',
+  { id:'port', name:'港口仓储区', gearMin:25000, unlocked:true, size:'3200 × 2000',
     risk:'超高风险', lootLabel:'爆率很高', starChance:0.001, aiDiff:1.4,
     lootMul:{ common:0.8, uncommon:0.9, rare:2.3, epic:2.9, legendary:2.9, mythic:2.5 },   /* W16.85：爆率上调 */
     aiDist:{ factory:{scav:2,pmc:4,sniper:2}, depot:{scav:1,pmc:5,sniper:1}, airport:{scav:1,pmc:3,sniper:2} },
@@ -6679,52 +6646,34 @@ function loadMap(map) {
 }
 function inMenu() { return document.body.classList.contains('in-menu'); }
 function renderMapCard() {
-  var lv = playerLevel();
-  var need = mapMinLv(selectedMap);
-  var locked = lv < need;
   var tag = document.getElementById('map-tag');
-  tag.textContent = locked ? ('🔒 需 Lv.' + need + ' 解锁') : ('已解锁 · ' + selectedMap.risk);
-  tag.style.color = locked ? '#f59e0b' : '';
+  tag.textContent = '已解锁 · ' + selectedMap.risk;   /* W17.4：等级移除，全图自由进入 */
+  tag.style.color = '';
   document.getElementById('map-name').textContent = selectedMap.name;
   document.getElementById('map-desc').textContent = selectedMap.desc;
   document.getElementById('map-tags').innerHTML =
-    '<i>撤离点 ×3</i><i>容器 ×' + (MAP_PLANS[selectedMap.id] ? MAP_PLANS[selectedMap.id].pts.length : 12) + '</i><i>' + selectedMap.lootLabel + '</i>' +
+    '<i>撤离点 ×3</i><i>容器 ×' + ((typeof MAP_PLANS !== 'undefined' && MAP_PLANS[selectedMap.id]) ? MAP_PLANS[selectedMap.id].pts.length : 12) + '</i><i>' + selectedMap.lootLabel + '</i>' +
     '<i style="color:#7dd3fc">装备 ' + gearLimitText(selectedMap) + '</i>';
   var hint = document.getElementById('map-level-hint');
-  if (hint) hint.textContent = 'Lv.' + need + ' 解锁 · ' + selectedMap.risk;
+  if (hint) hint.textContent = selectedMap.risk + ' · 自由进入';
   Array.prototype.forEach.call(document.querySelectorAll('#map-grid .map-mini'), function(btn) {
     var m = MAPS[+btn.dataset.map];
     if (!m) return;
-    var mNeed = mapMinLv(m), mLocked = lv < mNeed;
     btn.classList.toggle('active', m === selectedMap);
-    btn.classList.toggle('locked', mLocked);
-    btn.innerHTML = m.name + '<br>' + m.risk + ' · ' +
-      (mLocked ? ('🔒 需 Lv.' + mNeed) : ('Lv.' + mNeed + ' 可玩'));
+    btn.classList.remove('locked');
+    btn.innerHTML = m.name + '<br>' + m.risk;
   });
 }
 
 /* W16.21：刷新等级条与难度按钮 */
 function refreshLevelUI() {
-  var info = levelFromXp(playerXp);
-  var lvEl = document.getElementById('player-level');
-  if (lvEl) lvEl.textContent = 'Lv.' + info.lv;
-  var fill = document.getElementById('xp-fill');
-  if (fill) fill.style.width = Math.min(100, info.need ? info.cur / info.need * 100 : 100) + '%';
-  var txt = document.getElementById('xp-text');
-  if (txt) txt.textContent = (info.lv >= LEVEL_CAP) ? '已满级 60' : (info.cur + ' / ' + info.need + ' EXP');
-  renderMapCard();          // 等级变化后刷新地图解锁状态
+  renderMapCard();          /* W17.4：等级已移除，仅刷新地图卡 */
 }
 /* W16.22：选地图——等级不够直接拦下，并说明还差多少级 */
 function selectMap(idx) {
   var m = MAPS[idx];
   if (!m) return false;
-  var lv = playerLevel(), need = mapMinLv(m);
-  if (lv < need) {
-    showToast('等级不足 · ' + m.name + '需 Lv.' + need + '（当前 Lv.' + lv + '，还差 ' + (need - lv) + ' 级）');
-    return false;
-  }
-
-  if (selectedMap === m) return true;
+  if (selectedMap === m) return true;   /* W17.4：等级门槛已移除 */
   selectedMap = m;
   saveGame();
   refreshStartScreen();    /* W16.35：切换地图后同步刷新配装提示/装备要求，之前只刷地图卡片导致提示不同步 */
@@ -6807,10 +6756,7 @@ function offscreenBtns() {
 /* 快速开始 / 选择地图出发：都是按当前配装立刻进局 */
 function deployToMap(map, firstRun) {
   if (!map || !map.unlocked) { showToast('该区域尚未解锁'); return; }
-  if (mapLocked(map)) {                                   // W16.22：等级门槛兜底
-    showToast('等级不足 · ' + map.name + '需 Lv.' + mapMinLv(map) + '（当前 Lv.' + playerLevel() + '）');
-    return;
-  }
+  /* W17.4：等级门槛已移除 */
   if (!firstRun) {                                        // W16.33：装备价值门槛（首次教程局豁免）
     var gearErr2 = gearGateFail(map);
     if (gearErr2) { showToast(gearErr2); return; }
@@ -6888,7 +6834,7 @@ var SB_SHARE = 'DRZDPQLGJC';                      // 托管网关的分享码，
 var OLD_SB_URL = 'https://nshatkznozyhdxdvxtfq.supabase.co';   // 老后端：仅用于老账号首次登录迁移
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k';
 var OLD_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zaGF0a3pub3p5aGR4ZHZ4dGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MDE0NjAsImV4cCI6MjEwOTA3NzQ2MH0.9A2wLsb9nu-qpkxWAPIrrkGxs9CnIQoBwYqpIKgbZAY';
-var SB_SESSION_KEY = 'extractionW6.acct.sess';   // 登录态（access/refresh token）
+var SB_SESSION_KEY = 'extractionS1.acct.sess';   // S1：测试服独立登录态   // 登录态（access/refresh token）
 var sbSess = null;            // { access_token, refresh_token, expires_at, user }
 var cloudTimer = 0, cloudBusy = false, cloudPending = null, cloudErrCount = 0;
 
@@ -7094,6 +7040,8 @@ function validNick(nick) {
    所以在 users 表里自建账号：PBKDF2-SHA256(12 万次) + 随机盐，密码不落明文。
    老玩家第一次登录时，仍用老后端 Supabase 校验一次密码，成功后把存档搬过来并落地本地账号。 */
 var UB_USERS = '/rest/v1/users';
+var S1_NICK_PREFIX = 'S1·';                       /* S1：测试服昵称前缀（库内隔离） */
+function s1Nick(nick) { return String(nick || '').replace(/^S1·/, ''); }   /* 显示时去掉前缀 */
 function ubB64(buf) { var s2 = '', u = new Uint8Array(buf); for (var i = 0; i < u.length; i++) s2 += String.fromCharCode(u[i]); return btoa(s2); }
 function ubUnb64(str) { var bin = atob(str), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 function ubSalt() { var u = new Uint8Array(16); (crypto.getRandomValues ? crypto.getRandomValues(u) : u.forEach(function(_, i) { u[i] = Math.random() * 256 | 0; })); return ubB64(u); }
@@ -7110,37 +7058,38 @@ function ubHash(pw, salt) {
     .then(function(k) { return crypto.subtle.deriveBits({ name: 'PBKDF2', salt: ubUnb64(salt), iterations: 120000, hash: 'SHA-256' }, k, 256); })
     .then(ubB64);
 }
-function ubUuid() {
-  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+function ubUuid() {   /* S1：uid 统一加 s1- 前缀 —— 测试服账号与正式服完全隔离 */
+  if (window.crypto && crypto.randomUUID) return 's1-' + crypto.randomUUID();
   var u = new Uint8Array(16); (crypto.getRandomValues ? crypto.getRandomValues(u) : u.forEach(function(_, i) { u[i] = Math.random() * 256 | 0; }));
   u[6] = (u[6] & 15) | 64; u[8] = (u[8] & 63) | 128;
   var h = []; for (var i = 0; i < 16; i++) h.push((u[i] + 0x100).toString(16).slice(1));
-  return h.slice(0, 4).join('') + '-' + h.slice(4, 6).join('') + '-' + h.slice(6, 8).join('') + '-' + h.slice(8, 10).join('') + '-' + h.slice(10).join('');
+  return 's1-' + h.slice(0, 4).join('') + '-' + h.slice(4, 6).join('') + '-' + h.slice(6, 8).join('') + '-' + h.slice(8, 10).join('') + '-' + h.slice(10).join('');
 }
 function ubSetSession(uid, nick) {
   sbSess = { access_token: SB_KEY, refresh_token: 'local', expires_at: Date.now() + 31536000000,
              local: true, user: { id: uid, email: nickToId(nick), user_metadata: { nick: nick } } };
   sbStoreSess(sbSess);
 }
-function ubFindUser(nick) {
-  return sbApi(UB_USERS + '?nick=eq.' + encodeURIComponent(nick) + '&select=uid,nick,salt,hash&limit=1', {});
+function ubFindUser(nick) {   /* S1：只查测试服自己的账号（S1·前缀） */
+  return sbApi(UB_USERS + '?nick=eq.' + encodeURIComponent(S1_NICK_PREFIX + nick) + '&select=uid,nick,salt,hash&limit=1', {});
 }
 function ubCreateUser(nick, pw, uid) {
   var salt = ubSalt();
   return ubHash(pw, salt).then(function(hash) {
     return sbApi(UB_USERS, {
       method: 'POST', headers: { 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ uid: uid, nick: nick, salt: salt, hash: hash, v: 1 })
+      body: JSON.stringify({ uid: uid, nick: S1_NICK_PREFIX + nick, salt: salt, hash: hash, v: 1 })   /* S1 */
     });
   }).then(function() {
     return sbApi('/rest/v1/user_nicks?on_conflict=uid', {
       method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ uid: uid, nick: nick })
+      body: JSON.stringify({ uid: uid, nick: S1_NICK_PREFIX + nick })   /* S1 */
     }).catch(function() {});
   });
 }
 /* 老后端校验 → 搬存档 → 落本地账号 */
 function ubMigrate(nick, pw) {
+  return Promise.resolve(null);   /* S1：测试服独立账号体系，不做老后端迁移 */
   var ids = nickToIdAll(nick), tok = null, oldUid = null;
   function tryAt(i) {
     if (i >= ids.length) return Promise.reject(new Error('migrate-fail'));
@@ -7359,15 +7308,6 @@ function cloudPullIfNewer() {
     var cloudXp = (row.data.stats && row.data.stats.xp) || 0;
     try { localTs = (JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') || {}).ts || 0; } catch (e) {}
     if (cloudTs <= localTs) {
-      /* W16.23：本地更新 → 整体不动；但云端经验更高时只补经验，
-         防止后台/管理端改的等级被本地旧存档永久盖住 */
-      if (cloudXp > playerXp) {
-        var beforeLv = playerLevel();
-        playerXp = cloudXp;
-        saveGame();
-        refreshAllUI();
-        if (playerLevel() > beforeLv) showToast('等级已同步云端 · Lv.' + playerLevel());
-      }
       return;
     }
     if (applySaveData(row.data)) {
@@ -7515,7 +7455,7 @@ function lbPush() {
 }
 function lbFetch() {
   /* 多取一些，过滤掉兜底昵称后仍能凑够一屏 */
-  return sbApi('/rest/v1/leaderboard?select=user_id,nick,total,money,extracts,kills,updated_at&order=total.desc,nick.asc&limit=100', {});
+  return sbApi('/rest/v1/leaderboard?select=user_id,nick,total,money,extracts,kills,updated_at&order=total.desc,nick.asc&limit=100&user_id=like.s1-*', {});   /* S1：只显示测试服玩家 */
 }
 function lbRender(rows) {
   var ul = document.getElementById('lb-list');
@@ -7709,7 +7649,7 @@ function frLoadFriends() {
         /* W16.73：unbase 的列名是 uid，旧库是 id —— 只读 .id 会拿到 undefined，
            被 frIsHidden(空) 判成脏数据，整张好友列表就永远是空的 */
         var frSeen = {};
-        frFriends = (ns || []).map(function(n) {
+        frFriends = (ns || []).map(function(n) { /* S1：昵称去前缀 */
           return { id: n.uid || n.id, nick: n.nick };
         }).filter(function(n) {
           if (!n.id) return false;
@@ -7767,10 +7707,10 @@ function frIsBadNick(nick) {
   return false;
 }
 function frLoadAll() {
-  return sbApi('/rest/v1/user_nicks?select=uid,nick&order=nick.asc&limit=200', {})
+  return sbApi('/rest/v1/user_nicks?select=uid,nick&order=nick.asc&limit=200&uid=like.s1-*', {})   /* S1：只列测试服玩家 */
     .then(function(rows) {
       frAll = (rows || []).map(function(r) {
-        return { id: r.uid || r.id, nick: r.nick };     // W16.73：unbase 列名是 uid
+        return { id: r.uid || r.id, nick: s1Nick(r.nick) };     /* S1：去前缀 */
       }).filter(function(r) {
         if (frIsHidden(r.id)) return false;          // 测试号黑名单（大小写不敏感）
         if (frIsBadNick(r.nick)) return false;       // 无名/空昵称账号不显示
@@ -8109,11 +8049,11 @@ function runLive() { return !player.dead && !runEnded && !inMenu(); }
 
 /* ---------- 网络：创建 / 加入 / 离开 ---------- */
 /* W16.71：unbase 没有 SQL 函数，建房/加入/离开改为直接读写表（原 mp_create_room 等） */
-function mpRoomCode() {
+function mpRoomCode() {   /* S1：房号 9 开头 7 位 —— 与正式服 6 位房号空间隔离 */
   var o = '';
   var u = new Uint8Array(6); (crypto.getRandomValues ? crypto.getRandomValues(u) : u.forEach(function(_, i) { u[i] = Math.random() * 256 | 0; }));
-  for (var i = 0; i < 6; i++) o += String(u[i] % 10);   // 纯数字：输入框是数字键盘
-  return o;
+  for (var i = 0; i < 6; i++) o += String(u[i] % 10);
+  return '9' + o;
 }
 function mpCreate(mapIndex, cb) {
   if (!sbSess) { cb && cb({ ok: false, reason: 'not_logged_in' }); return; }
@@ -8143,6 +8083,7 @@ function mpJoin(code, cb) {
   if (!sbSess) { cb && cb({ ok: false, reason: 'not_logged_in' }); return; }
   var c = String(code || '').trim().toUpperCase();
   if (!c) { cb && cb({ ok: false, reason: 'empty_code' }); return; }
+  if (!/^9\d{6}$/.test(c)) { cb && cb({ ok: false, reason: '测试服房号是 9 开头的 7 位数字，正式服账号与房间都进不来' }); return; }   /* S1 */
   MP.busy = true;
   var uid = frMe(), rid = null;
   sbApi('/rest/v1/mp_rooms?code=eq.' + encodeURIComponent(c) + '&status=eq.waiting&select=rid,map_index&limit=1', {})
@@ -11004,7 +10945,7 @@ addEventListener('keydown', function(e) {
         <div class="mp-col">
           <div class="mp-or"><span>好友的房间码</span></div>
           <div class="mp-join-row">
-            <input id="mp-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="6 位房间码">
+            <input id="mp-code-input" type="text" inputmode="numeric" maxlength="7" placeholder="9 开头的 7 位房号">
             <button class="mp-action" id="mp-join" type="button">加入</button>
           </div>
           <div class="mp-tip" id="mp-tip"></div>
@@ -11225,6 +11166,9 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.4', t:'2026年11年25', items:[
+    { k:'调整', d:'等级系统整体移除：等级、经验、地图等级门槛全部删除，三张图自由进入（装备价值门槛保留）' }
+  ]},
   { v:'W17.3', t:'2026年11月25日 00:35', items:[
     { k:'新增', d:'三张图布局真正分家：雷达站原版 / 工业区左右镜像 / 港口旋转 180°，各有专属建筑与拆除的掩体，撤离点与分区随之移位' },
     { k:'修复', d:'战术地图标题改为跟随当前地图名；几处贴墙物资点微调到可交互位置' }
