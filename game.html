@@ -12,14 +12,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="三角形突围">
+<meta name="apple-mobile-web-app-title" content="撤离协议">
 <meta name="theme-color" content="#060b14">
-<title>三角形突围 · 交战 · 搜索 · 撤离</title>
+<title>撤离协议 · 交战 · 搜索 · 撤离</title>
 <!-- W16.6：自动更新哨兵 —— 每次打开都自查线上版本，发现更新就带随机参数强刷
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W16.95 2026-11-25 22:30';
+  var BUILD = 'W16.96 2026-11-26 01:10';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1449,6 +1449,46 @@
   @media (prefers-reduced-motion:reduce) {
     *, *::before, *::after { transition:none !important; }
   }
+
+  /* ===== 主界面美化（W17.11 / W16.96）===== */
+  #start-screen { background:
+      radial-gradient(900px 460px at 15% -8%, rgba(56,189,248,.10), transparent 62%),
+      radial-gradient(860px 440px at 102% -6%, rgba(74,222,128,.07), transparent 60%),
+      radial-gradient(700px 380px at 50% 112%, rgba(59,130,246,.08), transparent 62%), #0a1220; }
+  #start-screen::before { content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 43px, rgba(148,163,184,.045) 43px 44px),
+        repeating-linear-gradient(90deg, transparent 0 43px, rgba(148,163,184,.045) 43px 44px);
+      mask-image:radial-gradient(1200px 700px at 50% 20%, #000 30%, transparent 90%);
+      -webkit-mask-image:radial-gradient(1200px 700px at 50% 20%, #000 30%, transparent 90%); }
+  .brand-row, .start-main, .start-foot { position:relative; z-index:1; }
+  .brand #brand-name { font-size:clamp(30px,4.4vw,46px); font-weight:900; letter-spacing:.08em;
+      background:linear-gradient(94deg,#f1f7ff 18%,#8ad2ff 52%,#5eead4 88%);
+      -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .brand #brand-name::after { content:''; display:block; width:72px; height:3px; margin-top:9px; border-radius:2px;
+      background:linear-gradient(90deg,#5eead4,#8ad2ff 60%,transparent); }
+  .intro-logo { background:linear-gradient(94deg,#f1f7ff 20%,#8ad2ff 60%,#5eead4);
+      -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .profile-card { border:1px solid #24344d; background:linear-gradient(180deg,rgba(20,31,48,.85),rgba(13,21,35,.92));
+      box-shadow:0 10px 30px -18px rgba(2,8,20,.9); }
+  .start-card { border-radius:14px; border-color:#223349;
+      background:linear-gradient(180deg,rgba(19,29,46,.72),rgba(12,19,32,.88));
+      box-shadow:0 12px 34px -22px rgba(0,0,0,.85); }
+  .card-title h2 { position:relative; padding-left:12px; letter-spacing:.12em; }
+  .card-title h2::before { content:''; position:absolute; left:0; top:2px; bottom:2px; width:3px; border-radius:2px;
+      background:linear-gradient(180deg,#5eead4,#38bdf8); }
+  .deploy-btn { border:none; background:linear-gradient(94deg,#15b876,#34d399 55%,#5eead4); color:#052e1c;
+      box-shadow:0 10px 30px -12px rgba(52,211,153,.65); }
+  .deploy-btn:hover { filter:brightness(1.06); box-shadow:0 14px 36px -12px rgba(52,211,153,.8); }
+  .menu-btn { border-radius:10px; background:linear-gradient(180deg,rgba(23,34,54,.9),rgba(14,22,37,.95)); }
+  .lb-big-btn { border-radius:11px; background:linear-gradient(180deg,rgba(25,37,58,.78),rgba(15,24,40,.92));
+      transition:transform .15s, border-color .15s, box-shadow .15s, background .15s; }
+  .lb-big-btn:hover { transform:translateY(-2px); box-shadow:0 10px 24px -14px rgba(56,189,248,.55); }
+  .lb-big-btn:active { transform:scale(.97); }
+  @media (min-width:900px) {
+    .brand-btns { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .brand-btns .lb-big-btn { margin:0; }
+  }
 </style>
 </head>
 <body>
@@ -1556,7 +1596,7 @@
   <div id="intro-inner">
     <video id="intro-video" src="intro.mp4" preload="auto" playsinline webkit-playsinline></video>
     <div id="intro-launch">
-      <div class="intro-logo">三角形突围</div>
+      <div class="intro-logo">撤离协议</div>
       <div class="intro-sub">EXTRACTION PROTOCOL</div>
       <button id="intro-start" type="button">开 始 游 戏</button>
     </div>
@@ -1568,7 +1608,7 @@
   <div class="start-wrap">
     <div class="brand-row">
       <div class="brand">
-        <h1 id="brand-name">三角形突围</h1>
+        <h1 id="brand-name">撤离协议</h1>
         <h2 class="brand-season">S0 赛季测试</h2>
         <p class="brand-sub">Extraction Protocol · 交战 · 搜索 · 撤离</p>
         <p id="game-version" style="margin:4px 0 0;color:#fbbf24;font-size:11px;font-family:ui-monospace,monospace;">版本加载中…</p>
@@ -7408,8 +7448,8 @@ function lbClose() {
   var bm = document.getElementById('credits-mail');
   if (bm) bm.addEventListener('click', function() {
     location.href = 'mailto:' + CREATOR_EMAIL +
-      '?subject=' + encodeURIComponent('来自《三角形突围》玩家的消息') +
-      '&body=' + encodeURIComponent('你好红狼：\n\n（在这里写下你想说的话）\n\n—— 来自三角形突围的一名干员');
+      '?subject=' + encodeURIComponent('来自《撤离协议》玩家的消息') +
+      '&body=' + encodeURIComponent('你好红狼：\n\n（在这里写下你想说的话）\n\n—— 来自撤离协议的一名干员');
   });
   /* 微信 / 电话：点击复制号码（兼容 clipboard API 与旧浏览器） */
   function copyContact(val, tip) {
@@ -10911,7 +10951,7 @@ addEventListener('keydown', function(e) {
       var blob=new Blob([u8],{type:'application/vnd.android.package-archive'});
       var a=document.createElement('a');
       a.href=URL.createObjectURL(blob);
-      a.download='三角形突围.apk';
+      a.download='撤离协议.apk';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function(){ try{URL.revokeObjectURL(a.href);}catch(e){} },5000);
       try{ showToast('安装包下载中 · 若提示「未知来源」，选择允许即可安装'); }catch(e){}
@@ -11038,6 +11078,10 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W16.96', t:'2026年11月26日 01:10', items:[
+    { k:'品牌', d:'游戏更名《撤离协议》（英文 Extraction Protocol）——原来的「三角形突围」太像三角洲行动+暗区突围的组合，现在是有自己名字的游戏了' },
+    { k:'界面', d:'主界面整体美化：暗色渐变底 + 战术网格背景、标题渐变字、功能按钮卡片化（悬停浮起）、快速开始按钮换绿色高亮、卡片圆角阴影统一' }
+  ]},
   { v:'W16.95', t:'2026年11月25日 22:30', items:[
     { k:'新增', d:'好友列表显示在线状态：绿标「在线」/ 灰标「离线」，聊天窗口顶部同步显示；在线判定 = 90 秒内在游戏中（自动心跳，无需好友操作）' },
   ]},
