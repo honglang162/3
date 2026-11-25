@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.9 2026-11-25 22:30';
+  var BUILD = 'W17.10 2026-11-26 00:05';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -2234,6 +2234,8 @@ var ITEM_DEFS = [
   { name:'加密数据硬盘', short:'加密盘', rarity:'epic', value:1450, kind:'情报', sources:['safe','ai'] },
   { name:'热成像模块', short:'热成像', rarity:'epic', value:1680, kind:'装备', sources:['weapon','safe','ai'] },
   { name:'实验性药剂', short:'实验药', rarity:'epic', value:1320, kind:'医疗', sources:['medical','safe','ai'], equip:'med', heal:100 },
+  { name:'军用凝固血清', short:'血清', rarity:'legendary', value:2800, kind:'医疗', sources:['safe','ai'], equip:'med', heal:120 },
+  { name:'纳米修复剂', short:'纳米剂', rarity:'mythic', value:6600, kind:'医疗', sources:['safe'], equip:'med', heal:150 },
   { name:'机密行动文件', short:'机密文件', rarity:'legendary', value:4200, kind:'情报', sources:['safe','ai'] },
   { name:'金狮纪念像', short:'金狮像', rarity:'legendary', value:3600, kind:'收藏品', sources:['safe','ai'] },
   { name:'东洲之星', short:'东洲之星', rarity:'mythic', value:12800, kind:'稀世宝石', sources:[], look:'star-gem', exclusive:'safe' },
@@ -2274,6 +2276,7 @@ var ITEM_DEFS = [
   { name:'复合陶瓷板甲', short:'陶瓷甲', rarity:'rare', value:2100, kind:'护甲', equip:'armor', armor:68, sources:['medical','safe','ai'] },
   { name:'重型动力装甲', short:'动力甲', rarity:'epic', value:4600, kind:'护甲', equip:'armor', armor:84, sources:['safe','ai'] },
   { name:'实验外骨骼装甲', short:'外骨骼', rarity:'legendary', value:8800, kind:'护甲', equip:'armor', armor:96, sources:['safe','ai'] },
+  { name:'原型动力装甲', short:'原型甲', rarity:'mythic', value:16800, kind:'护甲', equip:'armor', armor:100, sources:['safe'] },   /* W17.10：护甲红色顶配，与「原型动力甲蓝图」成对 */
   /* S1：头盔六品质 —— 白/绿/蓝/紫/金/红，按 60% 折算进护甲，与护甲叠加 */
   { name:'制式头盔', short:'头盔', rarity:'common', value:120, kind:'头盔', equip:'helmet', armor:8, sources:['supply','medical','ai'] },
   { name:'战术头盔', short:'头盔', rarity:'uncommon', value:320, kind:'头盔', equip:'helmet', armor:14, sources:['weapon','supply','ai'] },
@@ -2282,12 +2285,18 @@ var ITEM_DEFS = [
   { name:'特勤夜视头盔', short:'头盔', rarity:'legendary', value:5200, kind:'头盔', equip:'helmet', armor:44, sources:['safe','ai'] },
   { name:'原型动力头盔', short:'头盔', rarity:'mythic', value:12800, kind:'头盔', equip:'helmet', armor:60, sources:['safe','ai'] },
   { name:'战术挎包', short:'挎包', rarity:'common', value:320, kind:'背包', equip:'pack', slotBonus:12, sources:['supply','ai'] },
+  { name:'扩容行军包', short:'行军包', rarity:'uncommon', value:860, kind:'背包', equip:'pack', slotBonus:18, sources:['supply','ai'] },
   { name:'突击背包', short:'突击包', rarity:'rare', value:1500, kind:'背包', equip:'pack', slotBonus:24, sources:['supply','ai'] },
   { name:'大容量驮包', short:'驮包', rarity:'epic', value:3200, kind:'背包', equip:'pack', slotBonus:36, sources:['safe','ai'] },
+  { name:'军规背囊', short:'军规包', rarity:'legendary', value:6400, kind:'背包', equip:'pack', slotBonus:44, sources:['safe','ai'] },
+  { name:'原型空间背包', short:'空间包', rarity:'mythic', value:13500, kind:'背包', equip:'pack', slotBonus:52, sources:['safe'] },
   /* W16.49：胸挂 —— 容量和背包合并计算（slotBonus 直接叠加） */
   { name:'轻型胸挂', short:'轻挂', rarity:'common', value:420, kind:'胸挂', equip:'rig', slotBonus:6, sources:['supply','ai'] },
+  { name:'加密战术胸挂', short:'加密挂', rarity:'uncommon', value:900, kind:'胸挂', equip:'rig', slotBonus:9, sources:['supply','ai'] },
   { name:'战术胸挂', short:'战挂', rarity:'rare', value:1600, kind:'胸挂', equip:'rig', slotBonus:12, sources:['supply','ai'] },
-  { name:'重型胸挂', short:'重挂', rarity:'epic', value:3400, kind:'胸挂', equip:'rig', slotBonus:20, sources:['safe','ai'] }
+  { name:'重型胸挂', short:'重挂', rarity:'epic', value:3400, kind:'胸挂', equip:'rig', slotBonus:20, sources:['safe','ai'] },
+  { name:'特勤携行具', short:'特勤挂', rarity:'legendary', value:6600, kind:'胸挂', equip:'rig', slotBonus:26, sources:['safe','ai'] },
+  { name:'原型智能携行具', short:'智能挂', rarity:'mythic', value:13800, kind:'胸挂', equip:'rig', slotBonus:32, sources:['safe'] }
 ];
 var CONTAINER_TYPES = {   /* W16.85：全图爆率上调 —— 每箱物品数量 +1 */
   supply: { name:'补给箱', size:12, min:6, max:9, weights:{common:52,uncommon:30,rare:14,epic:3,legendary:1,mythic:0.2} },
@@ -11567,6 +11576,10 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.10', t:'2026年11月26日 00:05', items:[
+    { k:'新增', d:'六品质补全：护甲补红色「原型动力装甲」（护甲值 100 顶满）；背包补绿/金/红（扩容行军包 18 格 / 军规背囊 44 格 / 原型空间背包 52 格）；胸挂补绿/金/红（加密战术胸挂 9 格 / 特勤携行具 26 格 / 原型智能携行具 32 格）；医疗品补金/红（军用凝固血清 回120 / 纳米修复剂 回150）' },
+    { k:'说明', d:'红金装备只从加密保险箱掉落，商店同步上架；至此武器/护甲/头盔/背包/胸挂/医疗品全部六品质齐' }
+  ]},
   { v:'W17.9', t:'2026年11月25日 22:30', items:[
     { k:'新增', d:'好友列表显示在线状态：绿标「在线」/ 灰标「离线」，聊天窗口顶部同步显示；在线判定 = 90 秒内在游戏中（自动心跳，无需好友操作）' },
   ]},
