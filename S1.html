@@ -12,14 +12,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="绝境逃生">
+<meta name="apple-mobile-web-app-title" content="三角形突围">
 <meta name="theme-color" content="#060b14">
-<title>绝境逃生 · 交战 · 搜索 · 撤离</title>
+<title>三角形突围 · 交战 · 搜索 · 撤离</title>
 <!-- W16.6：自动更新哨兵 —— 每次打开都自查线上版本，发现更新就带随机参数强刷
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.12 2026-11-26 01:35';
+  var BUILD = 'W17.13 2026-11-26 13:15';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -1620,8 +1620,8 @@
   <div id="intro-inner">
     <video id="intro-video" src="intro.mp4" preload="auto" playsinline webkit-playsinline></video>
     <div id="intro-launch">
-      <div class="intro-logo">绝境逃生</div>
-      <div class="intro-sub">DESPERATE ESCAPE</div>
+      <div class="intro-logo">三角形突围</div>
+      <div class="intro-sub">EXTRACTION PROTOCOL</div>
       <button id="intro-start" type="button">开 始 游 戏</button>
     </div>
     <button id="intro-skip" type="button">跳过 ›</button>
@@ -1632,9 +1632,9 @@
   <div class="start-wrap">
     <div class="brand-row">
       <div class="brand">
-        <h1 id="brand-name">绝境逃生</h1>
+        <h1 id="brand-name">三角形突围</h1>
         <h2 class="brand-season">S1 赛季 · 起源 <i class="season-tag">测试服</i></h2>
-        <p class="brand-sub">Desperate Escape · 交战 · 搜索 · 撤离</p>
+        <p class="brand-sub">Extraction Protocol · 交战 · 搜索 · 撤离</p>
         <p id="game-version" style="margin:4px 0 0;color:#fbbf24;font-size:11px;font-family:ui-monospace,monospace;">版本加载中…</p>
         <div class="brand-btns">
           <button id="set-open-big" class="lb-big-btn cfg" type="button">⚙️ 设置<small>画质 · 操作 · 布局</small></button>
@@ -1751,7 +1751,7 @@
     <ul class="s1-list">
       <li><b>🗺️ 地图焕新<i>已上线</i></b><span>每张地图独一无二——布局、地貌、建筑各不相同，告别一模一样</span></li>
       <li><b>🧰 保险箱扩容<i>已上线</i></b><span>保险箱数量大幅增加，搜刮更有惊喜</span></li>
-      <li><b>🗝️ 房卡房间<i>已上线</i></b><span>每张图 6 个贴边缘的加密房间：补给储藏间 / 医疗室 / 军械库 / 情报室 / 起源工作室 / 策划红狼工作室，房卡越贵房内物资越多</span></li>
+      <li><b>🗝️ 房卡房间<i>已上线</i></b><span>每张图外墙外侧挂着 6 个加密房间（雷达站下×2 上×2 左×1 右×1，门直接开在边墙上，房间 460×360 比图内更大）：补给储藏间 / 医疗室 / 军械库 / 情报室 / 起源工作室 / 策划红狼工作室，房卡越贵房内物资越多</span></li>
       <li><b>🎒 卡包系统<i>已上线</i></b><span>房卡必须装进卡包才能刷卡进房 —— 默认 2 格，商店可升级到 4 格 / 6 格</span></li>
       <li><b>🪖 全新装备：头盔<i>已上线</i></b><span>头部防护正式登场，防护体系再添一环</span></li>
       <li><b>🎨 六大品质体系<i>计划中</i></b><span>每种装备都有六档品质：白 · 绿 · 蓝 · 紫 · 金 · 红</span></li>
@@ -2150,8 +2150,8 @@ function nudgeOutOfWall(p, r) {
       else if (m === top) p.y = w.y - r; else p.y = w.y + w.h + r;
     }
   }
-  p.x = Math.max(60, Math.min(WORLD.w - 60, p.x));
-  p.y = Math.max(60, Math.min(WORLD.h - 60, p.y));
+  p.x = Math.max(-PAD_X + 60, Math.min(WORLD.w + PAD_X - 60, p.x));
+  p.y = Math.max(-PAD_Y + 60, Math.min(WORLD.h + PAD_Y - 60, p.y));
   return p;
 }
 function hitWall(x, y, r) {
@@ -5166,8 +5166,8 @@ function updateSlide(dt) {
     if (!hitWallFast(sx, player.y, player.r)) player.x = sx;
     else slideT = 0;                                             // 撞墙立刻结束
     if (!hitWallFast(player.x, sy, player.r)) player.y = sy;
-    player.x = Math.max(player.r + 40, Math.min(WORLD.w - player.r - 40, player.x));
-    player.y = Math.max(player.r + 40, Math.min(WORLD.h - player.r - 40, player.y));
+    player.x = Math.max(-PAD_X + player.r, Math.min(WORLD.w + PAD_X - player.r, player.x));
+    player.y = Math.max(-PAD_Y + player.r, Math.min(WORLD.h + PAD_Y - player.r, player.y));
     SLIDE_DIST_TOTAL += Math.hypot(player.x - px0, player.y - py0);
     /* 记录真实轨迹点：滑过的地方留下划痕，滑完还能看到 */
     slideTrail.push({ x: player.x - slideDirX * player.r * 0.9,
@@ -5633,11 +5633,10 @@ var AI_DISTRIBUTION = {
 };
 function zoneSpawnPos(zone, minDistFromPlayer) {
   var p, tries = 0;
-  function inKeyRoom(q) {                       /* S1 W17.8：别把 AI 刷进上锁的加密房间里 */
-    var plan = selectedMap && KEY_ROOM_PLANS[selectedMap.id];
-    if (!plan) return false;
-    for (var i = 0; i < plan.length; i++) {
-      var r = plan[i];
+  function inKeyRoom(q) {                       /* S1 W17.13：别把 AI 刷进外挂的加密房间里 */
+    if (!keyRoomDoors || !keyRoomDoors.length) return false;   /* 顶层 populateAIs 早于房间构建，须判空 */
+    for (var i = 0; i < keyRoomDoors.length; i++) {
+      var r = keyRoomDoors[i].room;
       if (q.x > r.x - 40 && q.x < r.x + ROOM_W + 40 && q.y > r.y - 40 && q.y < r.y + ROOM_H + 40) return true;
     }
     return false;
@@ -5930,8 +5929,8 @@ function update(dt) {
     var nx = player.x + mx * player.speed * dt, ny = player.y + my * player.speed * dt;
     if (!hitWallFast(nx, player.y, player.r)) player.x = nx;
     if (!hitWallFast(player.x, ny, player.r)) player.y = ny;
-    player.x = Math.max(player.r + 40, Math.min(WORLD.w - player.r - 40, player.x));
-    player.y = Math.max(player.r + 40, Math.min(WORLD.h - player.r - 40, player.y));
+    player.x = Math.max(-PAD_X + player.r, Math.min(WORLD.w + PAD_X - player.r, player.x));
+    player.y = Math.max(-PAD_Y + player.r, Math.min(WORLD.h + PAD_Y - player.r, player.y));
   }
   /* W16.26：走路动画相位（有输入才迈腿） */
   player.moving = (slideT <= 0) && Math.hypot(mx, my) > 0.1;
@@ -6088,8 +6087,8 @@ function update(dt) {
   if (SPEC.on && MP.allies[SPEC.id]) camSrc = MP.allies[SPEC.id];
   /* W16.76：可视范围要按视野倍率放大，否则缩小视野后相机贴边会露黑边 */
   var vScale = viewScale(), vw = viewW / vScale, vh = viewH / vScale;
-  var tx = Math.max(0, Math.min(Math.max(0, WORLD.w - vw), camSrc.x - vw / 2)),
-      ty = Math.max(0, Math.min(Math.max(0, WORLD.h - vh), camSrc.y - vh / 2));
+  var tx = Math.max(-PAD_X, Math.min(WORLD.w + PAD_X - vw, camSrc.x - vw / 2)),
+      ty = Math.max(-PAD_Y, Math.min(WORLD.h + PAD_Y - vh, camSrc.y - vh / 2));
   cam.x += (tx - cam.x) * Math.min(1, dt * 8);
   cam.y += (ty - cam.y) * Math.min(1, dt * 8);
   shake = Math.max(0, shake - dt * 10);
@@ -6669,6 +6668,7 @@ function paintMap(g, baseX, baseY, k, isFull) {
   g.save();
   g.translate(baseX, baseY);
   g.fillStyle = (MAP_PLANS[selectedMap.id] && MAP_PLANS[selectedMap.id].ground) || '#1c2431'; g.fillRect(0, 0, WORLD.w * k, WORLD.h * k);
+  g.beginPath(); g.rect(0, 0, WORLD.w * k, WORLD.h * k); g.clip();   /* W17.13：外挂房间超出地图矩形的部分不画 */
   for (var z = 0; z < ZONES.length; z++) {
     var Zn = ZONES[z];
     g.fillStyle = Zn.tint.replace(/\.[0-9]+\)/, isFull ? '.26)' : '.35)');
@@ -6868,41 +6868,43 @@ var MAP_WALL_SETS = {};
 /* S1 W17.8：房卡加密房间 —— 每张图 6 个，全部贴地图边缘 / 墙角（不占现有地图内部布点）。
    六种房卡（白/绿/蓝/紫/金/红）各对应一种房间，越贵的房卡房内物资越多。
    坐标离线验证：不与任何墙体重叠 / 房间内无原有墙 / 门外可站 / 离物资点≥72 / 离撤离点≥150 */
-var ROOM_W = 280, ROOM_H = 220, ROOM_T = 30, ROOM_DOOR = 100;
+var ROOM_W = 460, ROOM_H = 360, ROOM_T = 30, ROOM_DOOR = 110;
+var PAD_X = ROOM_W + 80, PAD_Y = ROOM_H + 80;   /* 房间挂在地图外：世界外扩的行走/摄像机边界 */
 var KEY_ROOM_PLANS = {
+  /* W17.13：房间全部外置 —— 挂在地图外墙的外侧，门直接开在边墙上，房间更大 */
   radar: [
-    { card:'supply',  x:840,  y:60,   side:'bottom' },
-    { card:'medical', x:1500, y:60,   side:'bottom' },
-    { card:'weapon',  x:2860, y:1320, side:'top'    },
-    { card:'intel',   x:1130, y:1720, side:'top'    },
-    { card:'studio',  x:60,   y:1380, side:'top'    },
-    { card:'origin',  x:2710, y:1720, side:'top'    }
+    { card:'supply',  cx:760,  edge:'bottom' },
+    { card:'medical', cx:1660, edge:'bottom' },
+    { card:'weapon',  cx:2500, edge:'top'    },
+    { card:'intel',   cx:1050, edge:'top'    },
+    { card:'studio',  cy:680,  edge:'left'   },
+    { card:'origin',  cy:1360, edge:'right'  }
   ],
   industrial: [
-    { card:'supply',  x:1480, y:60,   side:'bottom' },
-    { card:'medical', x:2040, y:60,   side:'bottom' },
-    { card:'weapon',  x:2860, y:1330, side:'top'    },
-    { card:'intel',   x:1020, y:1720, side:'top'    },
-    { card:'studio',  x:240,  y:1680, side:'top'    },
-    { card:'origin',  x:2860, y:1720, side:'top'    }
+    { card:'supply',  cx:980,  edge:'bottom' },
+    { card:'medical', cx:2100, edge:'bottom' },
+    { card:'weapon',  cx:2680, edge:'top'    },
+    { card:'intel',   cx:820,  edge:'top'    },
+    { card:'studio',  cy:1500, edge:'left'   },
+    { card:'origin',  cy:700,  edge:'right'  }
   ],
   port: [
-    { card:'supply',  x:760,  y:190,  side:'bottom' },
-    { card:'medical', x:1630, y:60,   side:'bottom' },
-    { card:'weapon',  x:2860, y:320,  side:'bottom' },
-    { card:'intel',   x:1670, y:1720, side:'top'    },
-    { card:'studio',  x:60,   y:460,  side:'bottom' },
-    { card:'origin',  x:2080, y:1720, side:'top'    }
+    { card:'supply',  cx:560,  edge:'bottom' },
+    { card:'medical', cx:1900, edge:'bottom' },
+    { card:'weapon',  cx:1400, edge:'top'    },
+    { card:'intel',   cx:2760, edge:'top'    },
+    { card:'studio',  cy:1000, edge:'left'   },
+    { card:'origin',  cy:1650, edge:'right'  }
   ]
 };
 /* 房内物资（相对房间左上角的偏移）—— 品质越高箱子越多越值钱 */
 var ROOM_LOOT = {
-  supply:  [[70,100,'supply'], [185,100,'supply']],
-  medical: [[62,100,'medical'], [140,100,'medical'], [218,100,'supply']],
-  weapon:  [[62,100,'weapon'],  [140,100,'weapon'],  [218,100,'safe']],
-  intel:   [[62,100,'safe'],    [140,100,'safe'],    [218,100,'medical']],
-  studio:  [[90,80,'safe'],     [200,80,'safe'],     [90,150,'safe'], [200,150,'weapon']],
-  origin:  [[90,80,'safe'],     [200,80,'safe'],     [90,150,'safe'], [200,150,'safe']]
+  supply:  [[110,150,'supply'], [310,150,'supply']],
+  medical: [[100,150,'medical'], [230,150,'medical'], [360,150,'supply']],
+  weapon:  [[100,150,'weapon'],  [230,150,'weapon'],  [360,150,'safe']],
+  intel:   [[100,150,'safe'],    [230,150,'safe'],    [360,150,'medical']],
+  studio:  [[110,110,'safe'],    [310,110,'safe'],    [110,240,'safe'], [310,240,'weapon']],
+  origin:  [[110,110,'safe'],    [310,110,'safe'],    [110,240,'safe'], [310,240,'safe']]
 };
 var keyRoomDoors = [];     /* 本局所有还没刷开的房卡门（可交互） */
 (function () {
@@ -6971,29 +6973,57 @@ function loadMap(map) {
   buildWallGrid();   /* S1 W17.7：换图后重建碰撞网格（修复此前一直拿雷达站墙体做碰撞的 bug） */
 }
 /* S1 W17.8：把每张图的 6 个加密房间拼出来 —— 三面实墙 + 一面留门洞（门板可刷卡开启） */
+/* W17.13：边墙开门洞 —— 把覆盖门洞的边墙切成两段，门板临时堵住，刷卡后移除门板 */
+function cutBorderGap(gx1, gy1, gx2, gy2) {
+  for (var i = walls.length - 1; i >= 0; i--) {
+    var w = walls[i];
+    if (!(w.x < gx2 && w.x + w.w > gx1 && w.y < gy2 && w.y + w.h > gy1)) continue;
+    walls.splice(i, 1);
+    if (w.x < gx1) walls.push({ x:w.x, y:w.y, w:gx1 - w.x, h:w.h });                       /* 门洞左段 */
+    if (w.x + w.w > gx2) walls.push({ x:gx2, y:w.y, w:w.x + w.w - gx2, h:w.h });            /* 门洞右段 */
+    if (w.y < gy1) walls.push({ x:gx1, y:w.y, w:gx2 - gx1, h:gy1 - w.y });                  /* 门洞上段 */
+    if (w.y + w.h > gy2) walls.push({ x:gx1, y:gy2, w:gx2 - gx1, h:w.y + w.h - gy2 });      /* 门洞下段 */
+  }
+}
+/* W17.13：房间外置 —— 挂在地图外墙外侧（更大），门就是边墙上的一段门板 */
 function loadKeyRoom(id) {
   keyRoomDoors = [];
   var plan = KEY_ROOM_PLANS[id];
   if (!plan) return;
+  var t = ROOM_T, half = ROOM_DOOR / 2;
   plan.forEach(function (p) {
-    var r = { x:p.x, y:p.y, w:ROOM_W, h:ROOM_H }, t = ROOM_T;
-    var dx = r.x + Math.round((r.w - ROOM_DOOR) / 2);
-    var d = p.side === 'top'
-      ? { x:dx, y:r.y, w:ROOM_DOOR, h:t }
-      : { x:dx, y:r.y + r.h - t, w:ROOM_DOOR, h:t };
+    if (p.edge === 'bottom')      cutBorderGap(p.cx - half, WORLD.h - 40, p.cx + half, WORLD.h);
+    else if (p.edge === 'top')    cutBorderGap(p.cx - half, 0, p.cx + half, 40);
+    else if (p.edge === 'left')   cutBorderGap(0, p.cy - half, 40, p.cy + half);
+    else                          cutBorderGap(WORLD.w - 40, p.cy - half, WORLD.w, p.cy + half);
+  });
+  plan.forEach(function (p) {
+    var r, d;
     function seg(x, y, w, h) { if (w > 0 && h > 0) walls.push({ x:x, y:y, w:w, h:h }); }
-    if (p.side === 'top') {
-      seg(r.x, r.y + r.h - t, r.w, t);                              /* 下 */
-      seg(r.x, r.y, t, r.h);                                        /* 左 */
-      seg(r.x + r.w - t, r.y, t, r.h);                              /* 右 */
-      seg(r.x, r.y, dx - r.x, t);                                   /* 上·左段 */
-      seg(dx + ROOM_DOOR, r.y, r.x + r.w - dx - ROOM_DOOR, t);       /* 上·右段 */
+    if (p.edge === 'bottom') {
+      r = { x:p.cx - ROOM_W / 2, y:WORLD.h, w:ROOM_W, h:ROOM_H };
+      d = { x:p.cx - half, y:WORLD.h - 40, w:ROOM_DOOR, h:40 };
+      seg(r.x, WORLD.h - t, t, ROOM_H + t);                          /* 左（与边墙搭接） */
+      seg(r.x + r.w - t, WORLD.h - t, t, ROOM_H + t);                /* 右 */
+      seg(r.x, r.y + r.h - t, r.w, t);                               /* 外侧（下） */
+    } else if (p.edge === 'top') {
+      r = { x:p.cx - ROOM_W / 2, y:-ROOM_H, w:ROOM_W, h:ROOM_H };
+      d = { x:p.cx - half, y:0, w:ROOM_DOOR, h:40 };
+      seg(r.x, -t, t, ROOM_H + t);                                   /* 左 */
+      seg(r.x + r.w - t, -t, t, ROOM_H + t);                         /* 右 */
+      seg(r.x, r.y, r.w, t);                                         /* 外侧（上） */
+    } else if (p.edge === 'left') {
+      r = { x:-ROOM_W, y:p.cy - ROOM_H / 2, w:ROOM_W, h:ROOM_H };
+      d = { x:0, y:p.cy - half, w:40, h:ROOM_DOOR };
+      seg(-t, r.y, ROOM_W + t, t);                                   /* 上（与边墙搭接） */
+      seg(-t, r.y + r.h - t, ROOM_W + t, t);                         /* 下 */
+      seg(r.x, r.y, t, r.h);                                         /* 外侧（左） */
     } else {
-      seg(r.x, r.y, r.w, t);                                        /* 上 */
-      seg(r.x, r.y, t, r.h);                                        /* 左 */
-      seg(r.x + r.w - t, r.y, t, r.h);                              /* 右 */
-      seg(r.x, r.y + r.h - t, dx - r.x, t);                         /* 下·左段 */
-      seg(dx + ROOM_DOOR, r.y + r.h - t, r.x + r.w - dx - ROOM_DOOR, t);
+      r = { x:WORLD.w, y:p.cy - ROOM_H / 2, w:ROOM_W, h:ROOM_H };
+      d = { x:WORLD.w - 40, y:p.cy - half, w:40, h:ROOM_DOOR };
+      seg(r.x, r.y, ROOM_W + t, t);                                  /* 上 */
+      seg(r.x, r.y + r.h - t, ROOM_W + t, t);                        /* 下 */
+      seg(r.x + r.w - t, r.y, t, r.h);                               /* 外侧（右） */
     }
     var wall = { x:d.x, y:d.y, w:d.w, h:d.h };
     walls.push(wall);
@@ -7950,8 +7980,8 @@ function lbClose() {
   var bm = document.getElementById('credits-mail');
   if (bm) bm.addEventListener('click', function() {
     location.href = 'mailto:' + CREATOR_EMAIL +
-      '?subject=' + encodeURIComponent('来自《绝境逃生》玩家的消息') +
-      '&body=' + encodeURIComponent('你好红狼：\n\n（在这里写下你想说的话）\n\n—— 来自绝境逃生的一名干员');
+      '?subject=' + encodeURIComponent('来自《三角形突围》玩家的消息') +
+      '&body=' + encodeURIComponent('你好红狼：\n\n（在这里写下你想说的话）\n\n—— 来自三角形突围的一名干员');
   });
   /* 微信 / 电话：点击复制号码（兼容 clipboard API 与旧浏览器） */
   function copyContact(val, tip) {
@@ -11616,6 +11646,11 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.13', t:'2026年11月26日 13:15', items:[
+    { k:'品牌', d:'游戏名改回《三角形突围》——听大家的，名字回归' },
+    { k:'重构', d:'房卡房间全部外置：不再挤在地图角上，改为直接挂在地图外墙的外侧（上下边各 2 个、左右各 1 个），门就是边墙上的一段门板，刷卡后边墙开门进入' },
+    { k:'新增', d:'房间扩大到 460×360（原来 280×220），房内箱子间距拉开；外挂房间区域摄像机/行走边界同步外扩，小地图只显示门的位置不越界' }
+  ]},
   { v:'W17.12', t:'2026年11月26日 01:35', items:[
     { k:'品牌', d:'游戏定名《绝境逃生》（英文 Desperate Escape）——定案，不再改了' },
     { k:'修复', d:'修复「更新日记」显示 [object Object] 的问题——新日志条目带【分类】标签正常显示，历史版本一次性修复' }
