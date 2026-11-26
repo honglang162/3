@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>控制台</title>
+<style>
+  :root { --bg:#0a0f18; --panel:#111826; --line:#1f2a3c; --txt:#dbe4f0; --sub:#7c8aa0;
+          --cyan:#38bdf8; --ok:#22c55e; --err:#ef4444; --warn:#f59e0b;
+          --common:#9aa7b8; --uncommon:#4ade80; --rare:#60a5fa; --epic:#c084fc; --legendary:#fbbf24; --mythic:#f472b6; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--txt); font:14px/1.5 -apple-system,'PingFang SC','Microsoft YaHei',sans-serif; min-height:100vh; }
+  button { font:inherit; cursor:pointer; }
+  /* 密码门 */
+  #gate { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg); z-index:99; }
+  #gate .box { width:min(340px,90vw); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px; }
+  #gate h1 { font-size:16px; margin-bottom:4px; }
+  #gate p { color:var(--sub); font-size:12px; margin-bottom:16px; }
+  #gate input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
+                background:#0d1420; color:var(--txt); outline:none; letter-spacing:2px; }
+  #gate input:focus { border-color:var(--cyan); }
+  #gate .go { width:100%; margin-top:12px; padding:10px; border:0; border-radius:8px;
+              background:var(--cyan); color:#04121c; font-weight:700; }
+  #gate .msg { min-height:18px; font-size:12px; margin-top:10px; color:var(--err); }
+  /* 主界面 */
+  #app { display:block; height:100vh; }
+  header { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); }
+  header h1 { font-size:15px; }
+  header .stat { color:var(--sub); font-size:12px; }
+  header .refresh { margin-left:auto; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--txt); }
+  header a.refresh { text-decoration:none; display:inline-block; }
+  header .refresh.mla { margin-left:0; }
+  #wrap { display:flex; height:calc(100vh - 53px); }
+  /* 左列 */
+  #list-col { width:300px; min-width:220px; border-right:1px solid var(--line); display:flex; flex-direction:column; }
+  #search { margin:10px; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:#0d1420; color:var(--txt); outline:none; }
+  #plist { overflow-y:auto; flex:1; }
+  .prow { padding:10px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .prow:hover { background:#141c2c; }
+  .prow.sel { background:#16223a; border-left:3px solid var(--cyan); }
+  .prow .pn { font-weight:700; }
+  .prow .pm { color:var(--sub); font-size:12px; }
+  /* 右侧详情 */
+  #detail { flex:1; overflow-y:auto; padding:16px 20px; }
+  .empty { color:var(--sub); padding:40px; text-align:center; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  .card h2 { font-size:14px; margin-bottom:10px; color:var(--cyan); }
+  .kv { display:flex; flex-wrap:wrap; gap:8px 20px; color:var(--sub); font-size:13px; margin-bottom:8px; }
+  .kv b { color:var(--txt); }
+  .money-edit { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+  .money-edit input { width:130px; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#0d1420; color:var(--txt); outline:none; }
+  .btn { padding:7px 14px; border-radius:8px; border:1px solid var(--line); background:#182238; color:var(--txt); }
+  .btn.pri { background:var(--cyan); border-color:var(--cyan); color:#04121c; font-weight:700; }
+  .btn.warn { background:transparent; border-color:var(--warn); color:var(--warn); }
+  .btn.danger { background:transparent; border-color:var(--err); color:var(--err); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .item { display:flex; align-items:center; gap:10px; padding:6px 10px; border-radius:8px; margin-bottom:4px; background:#0d1420; font-size:13px; }
+  .item .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .item .vl { color:var(--sub); }
+  .item button { padding:3px 10px; border-radius:6px; border:1px solid var(--line); background:transparent; color:var(--sub); font-size:12px; }
+  .item button:hover { color:var(--txt); border-color:var(--cyan); }
+  /* 仓库物品格子（游戏风格） */
+  .stash-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; }
+  .tile { position:relative; background:#0d1420; border:2px solid var(--line); border-radius:10px;
+          padding:10px 8px 8px; cursor:pointer; min-height:74px; }
+  .tile:hover { background:#111a2b; }
+  .tile.selk { outline:2px solid var(--cyan); outline-offset:1px; background:#121d31; }
+  .tile .tn { font-size:12px; line-height:1.25; min-height:30px; word-break:break-all;
+              display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .tile .tv { font-size:11px; color:var(--sub); margin-top:2px; }
+  .tile .tp { font-size:11px; color:var(--sub); }
+  .tile .bdg { position:absolute; top:4px; right:6px; font-size:10px; color:var(--sub);
+               background:#182238; border-radius:8px; padding:0 6px; }
+  .b-common { border-color:#3a4554; } .b-uncommon { border-color:#2c6e45; } .b-rare { border-color:#2d5385; }
+  .b-epic { border-color:#5d3a85; } .b-legendary { border-color:#8a6a1d; } .b-mythic { border-color:#833d63; }
+  .tile-act { margin-top:12px; padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+              background:#0d1420; display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:13px; }
+  .tile-act .sn { flex:1; min-width:120px; }
+  .r-common { color:var(--common); } .r-uncommon { color:var(--uncommon); } .r-rare { color:var(--rare); }
+  .r-epic { color:var(--epic); } .r-legendary { color:var(--legendary); } .r-mythic { color:var(--mythic); }
+  .add-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .add-row select { max-width:340px; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#0d1420; color:var(--txt); outline:none; }
+  .add-row input { width:64px; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#0d1420; color:var(--txt); outline:none; }
+  #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#182238; border:1px solid var(--line);
+           color:var(--txt); padding:9px 18px; border-radius:10px; font-size:13px; display:none; z-index:90; max-width:80vw; }
+  #toast.ok { border-color:var(--ok); color:var(--ok); }
+  #toast.err { border-color:var(--err); color:var(--err); }
+  .lbl-sub { color:var(--sub); font-size:12px; margin:10px 0 6px; }
+  @media (max-width:760px) {
+    #wrap { flex-direction:column; }
+    #list-col { width:100%; max-height:42vh; border-right:0; border-bottom:1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <h1>开发者控制台</h1>
+    <span class="stat" id="hdr-stat">加载中…</span>
+    <a class="refresh" href="/game.html" target="_blank">返回游戏</a>
+    <button class="refresh mla" id="btn-refresh" type="button">↻ 刷新</button>
+  </header>
+  <div id="wrap">
+    <div id="list-col">
+      <input id="search" placeholder="搜索昵称…" autocomplete="off">
+      <div id="plist"><div class="empty">加载中…</div></div>
+    </div>
+    <div id="detail"><div class="empty">← 左侧选择一名玩家</div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  /* ---------- 后端（与游戏同一套 anon 通道） ---------- */
+  var SB_URL = 'https://a189ce61ac0be9d3b.app.workbuddy.host';
+  var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k';
+  var SB_SHARE = 'DRZDPQLGJC';
+
+  function api(path, opts) {
+    opts = opts || {};
+    var h = { 'apikey': SB_KEY, 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SB_KEY };
+    for (var k in (opts.headers || {})) h[k] = opts.headers[k];
+    if (path.indexOf('?') >= 0) path += '&sharecode=' + SB_SHARE; else path += '?sharecode=' + SB_SHARE;
+    var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function () { try { ctl.abort(); } catch (e) {} }, 15000) : null;
+    return fetch(SB_URL + path, { method: opts.method || 'GET', headers: h, body: opts.body || undefined, signal: ctl ? ctl.signal : undefined })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          if (timer) clearTimeout(timer);
+          var d = null; try { d = t ? JSON.parse(t) : null; } catch (e) { d = t; }
+          if (!r.ok) { var m = (d && (d.message || d.msg || d.hint)) || ('HTTP ' + r.status); throw new Error(m); }
+          return fixRows(d);
+        });
+      }).catch(function (e) { if (timer) clearTimeout(timer); throw e; });
+  }
+  /* unbase 会把 JSON 列以字符串返回 —— 和游戏内 sbFixRows 一样兜底解析 */
+  var JSON_COLS = ['data', 'gear_json', 'ai_json'];
+  function fixRows(d) {
+    if (!d) return d;
+    var arr = (d instanceof Array) ? d : [d];
+    for (var i = 0; i < arr.length; i++) {
+      var r = arr[i];
+      if (!r || typeof r !== 'object') continue;
+      for (var c in JSON_COLS) {
+        var v = r[JSON_COLS[c]];
+        if (typeof v === 'string' && v && (v.charAt(0) === '{' || v.charAt(0) === '[')) {
+          try { r[JSON_COLS[c]] = JSON.parse(v); } catch (e) {}
+        } else if (v === '') { r[JSON_COLS[c]] = null; }
+      }
+    }
+    return d;
+  }
+
+  /* ---------- 账号密码工具（与游戏 ubHash 完全一致的 PBKDF2-SHA256） ---------- */
+  function ubB64(buf) { var s = '', u = new Uint8Array(buf); for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
+  function ubUnb64(str) { var bin = atob(str), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+  function ubSalt() { var u = new Uint8Array(16); (crypto.getRandomValues ? crypto.getRandomValues(u) : u.forEach(function (_, i) { u[i] = Math.random() * 256 | 0; })); return ubB64(u); }
+  function ubHash(pw, salt) {
+    if (!(window.crypto && crypto.subtle)) {
+      var h1 = 0x811c9dc5 | 0, salt2 = ubUnb64(salt);
+      for (var r = 0; r < 20000; r++) {
+        for (var i = 0; i < pw.length; i++) { h1 ^= pw.charCodeAt(i) + r; h1 = (h1 + ((h1 << 1) + (h1 << 4) + (h1 << 7) + (h1 << 8) + (h1 << 24))) >>> 0; }
+        for (var j = 0; j < salt2.length; j++) { h1 ^= salt2[j]; h1 = (h1 + ((h1 << 1) + (h1 << 4) + (h1 << 7) + (h1 << 8) + (h1 << 24))) >>> 0; }
+      }
+      return Promise.resolve('w' + (h1 >>> 0).toString(16) + '-' + pw.length + '-' + salt.length);
+    }
+    return crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits'])
+      .then(function (k) { return crypto.subtle.deriveBits({ name: 'PBKDF2', salt: ubUnb64(salt), iterations: 120000, hash: 'SHA-256' }, k, 256); })
+      .then(ubB64);
+  }
+
+  function toast(txt, cls) {
+    var t = document.getElementById('toast');
+    t.textContent = txt; t.className = cls || ''; t.style.display = 'block';
+    clearTimeout(t._tm); t._tm = setTimeout(function () { t.style.display = 'none'; }, 2600);
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function gnum(n) { return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  /* ---------- 物品定义：运行时从 game.html 提取，永远跟游戏同步 ---------- */
+  var DEFS = [];
+  function loadDefs() {
+    return fetch('/game.html?t=' + Date.now()).then(function (r) { return r.text(); }).then(function (html) {
+      var m = html.match(/var ITEM_DEFS = \[[\s\S]*?\n\];/);
+      if (!m) throw new Error('defs not found');
+      var defs = null;
+      (0, eval)(m[0] + '; window.__DEV_ITEM_DEFS = ITEM_DEFS;');
+      DEFS = window.__DEV_ITEM_DEFS || [];
+      if (!DEFS.length) throw new Error('defs empty');
+    }).catch(function (e) { DEFS = []; console.warn('[dev] 物品定义加载失败:', e && e.message); });
+  }
+  function defByName(n) { for (var i = 0; i < DEFS.length; i++) if (DEFS[i].name === n) return DEFS[i]; return null; }
+  /* 从定义造一条仓库物品（和游戏 serItem 的序列化字段一致） */
+  function serFromDef(d) {
+    return { n: d.name, r: d.rarity, v: d.value, k: d.kind, e: d.equip || null,
+             a: d.armor || 0, b: d.slotBonus || 0, h: d.heal || 0, l: d.look || null, s: d.secure || 0 };
+  }
+
+  /* ---------- 数据 ---------- */
+  var players = [], sel = null, filter = '', selKey = '';
+  function selItem(merged) {
+    for (var i = 0; i < merged.length; i++) if (merged[i].key === selKey) return merged[i];
+    return { n: '?', r: 'common', cnt: 0 };
+  }
+
+  function fetchAll() {
+    setStatus('加载中…');
+    return Promise.all([
+      api('/rest/v1/users?select=uid,nick,v,salt,hash&order=nick.asc'),
+      api('/rest/v1/saves?select=user_id,data,updated_at'),
+      api('/rest/v1/user_nicks?select=uid,nick').catch(function () { return []; }),
+      api('/rest/v1/leaderboard?select=user_id,nick,total,money,kills,extracts').catch(function () { return []; })
+    ]).then(function (r) {
+      var users = r[0] || [], saves = r[1] || [], nicks = r[2] || [], lb = r[3] || [];
+      var map = {};
+      users.forEach(function (u) { map[u.uid] = { uid: u.uid, nick: u.nick, hasAcct: true, acct: u, save: null, lb: null }; });
+      nicks.forEach(function (n) { if (!map[n.uid]) map[n.uid] = { uid: n.uid, nick: n.nick, hasAcct: false, save: null, lb: null }; });
+      saves.forEach(function (s) {
+        if (!map[s.user_id]) map[s.user_id] = { uid: s.user_id, nick: null, hasAcct: false, save: null, lb: null };
+        map[s.user_id].save = s;
+      });
+      lb.forEach(function (l) { if (map[l.user_id]) map[l.user_id].lb = l; else if (!map[l.user_id]) map[l.user_id] = { uid: l.user_id, nick: l.nick, hasAcct: false, save: null, lb: l }; });
+      players = Object.keys(map).map(function (k) {
+        var p = map[k];
+        if (!p.nick && p.save && p.save.data && p.save.data.nick) p.nick = p.save.data.nick;
+        if (!p.nick) p.nick = '未知玩家';
+        p.stash = (p.save && p.save.data && p.save.data.stash) || [];
+        p.money = (p.save && p.save.data && typeof p.save.data.money === 'number') ? p.save.data.money : null;
+        return p;
+      }).sort(function (a, b) { return a.nick.localeCompare(b.nick, 'zh'); });
+      renderList();
+      setStatus(players.length + ' 名玩家');
+    }).catch(function (e) { setStatus('加载失败：' + e.message); toast('加载失败：' + e.message, 'err'); });
+  }
+  function setStatus(s) { document.getElementById('hdr-stat').textContent = s; }
+
+  function renderList() {
+    var box = document.getElementById('plist');
+    var kw = filter.trim().toLowerCase();
+    var rows = players.filter(function (p) { return !kw || (p.nick || '').toLowerCase().indexOf(kw) >= 0; });
+    if (!rows.length) { box.innerHTML = '<div class="empty">没有匹配的玩家</div>'; return; }
+    box.innerHTML = rows.map(function (p) {
+      return '<div class="prow' + (sel && sel.uid === p.uid ? ' sel' : '') + '" data-uid="' + esc(p.uid) + '">' +
+        '<div class="pn">' + esc(p.nick) + (p.hasAcct ? '' : ' <span style="color:var(--sub);font-size:11px">(无账号)</span>') + '</div>' +
+        '<div class="pm">仓库 ' + p.stash.length + ' 件 · ' + (p.money == null ? '无存档' : '$' + gnum(p.money)) + '</div>' +
+      '</div>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.prow'), function (el) {
+      el.addEventListener('click', function () {
+        sel = players.filter(function (p) { return p.uid === el.getAttribute('data-uid'); })[0] || null;
+        selKey = '';
+        renderList(); renderDetail();
+      });
+    });
+  }
+
+  function stashItemRow(it, idx) {
+    if (!it) return '';
+    var d = defByName(it.n);
+    return '<div class="item">' +
+      '<span class="nm r-' + esc(it.r) + '">' + esc(it.n) + ' <span style="color:var(--sub)">×' + (it.cnt || 1) + '</span></span>' +
+      '<span class="vl">$' + gnum(it.v) + '</span>' +
+      '<button data-act="plus" data-idx="' + idx + '" type="button">+1</button>' +
+      '<button data-act="minus" data-idx="' + idx + '" type="button">移除</button>' +
+    '</div>';
+  }
+  /* 把相同物品合并显示 —— W16.85：同名同品阶合并成一行（不管单件价值差多少），
+     价值显示合计 */
+  function mergeStash(stash) {
+    var out = [], keyMap = {};
+    stash.forEach(function (it, i) {
+      if (!it) return;
+      var k = it.n + '|' + it.r;
+      if (keyMap[k] == null) {
+        keyMap[k] = out.length;
+        var o = Object.assign({ idx: i, cnt: 1, total: it.v || 0, key: k }, it);
+        out.push(o);
+      } else { out[keyMap[k]].cnt++; out[keyMap[k]].total += (it.v || 0); }
+    });
+    return out;
+  }
+
+  function renderDetail() {
+    var box = document.getElementById('detail');
+    if (!sel) { box.innerHTML = '<div class="empty">← 左侧选择一名玩家</div>'; return; }
+    var p = sel, sv = p.save && p.save.data ? p.save.data : null;
+    var eq = sv && sv.equip ? sv.equip : {};
+    var st = sv && sv.stats ? sv.stats : {};
+    var lb = p.lb || {};
+    var merged = mergeStash(p.stash || []);
+    /* W16.85：仓库改成游戏风格的物品格子，点选一个物品在下方操作 */
+    var itemsHtml = merged.length
+      ? '<div class="stash-grid">' + merged.map(function (it) {
+          return '<div class="tile b-' + esc(it.r) + (selKey === it.key ? ' selk' : '') + '" data-key="' + esc(it.key) + '">' +
+            '<span class="bdg">×' + it.cnt + '</span>' +
+            '<div class="tn r-' + esc(it.r) + '">' + esc(it.n) + '</div>' +
+            '<div class="tv">共 ' + it.cnt + ' 件</div>' +
+            '<div class="tp">合计 $' + gnum(it.total) + '</div>' +
+          '</div>';
+        }).join('') + '</div>' +
+        '<div class="tile-act">' +
+          (selKey
+            ? '<span class="sn">已选：<b class="r-' + esc(selItem(merged).r) + '">' + esc(selItem(merged).n) + '</b> ×' + selItem(merged).cnt + '</span>' +
+              '<button class="btn" data-act="plus" data-key="' + esc(selKey) + '" type="button">+1</button>' +
+              '<button class="btn warn" data-act="minus" data-key="' + esc(selKey) + '" type="button">-1</button>'
+            : '<span class="sn" style="color:var(--sub)">点上面的物品格子进行 +1 / -1 操作</span>') +
+        '</div>'
+      : '<div class="lbl-sub">仓库是空的</div>';
+
+    var opts = DEFS.map(function (d) {
+      return '<option value="' + esc(d.name) + '">' + esc(d.name) + ' · ' + d.rarity + ' · $' + d.value + '</option>';
+    }).join('');
+
+    box.innerHTML =
+      '<div class="card">' +
+        '<h2>' + esc(p.nick) + '</h2>' +
+        '<div class="kv">' +
+          '<span>UID</span><b style="word-break:break-all">' + esc(p.uid) + '</b>' +
+          '<span>账号</span><b>' + (p.hasAcct ? '有' : '无（仅存档）') + '</b>' +
+          '<span>对局</span><b>' + (st.runs || (lb.total || 0)) + '</b>' +
+          '<span>撤离</span><b>' + (st.extracts != null ? st.extracts : (lb.extracts || 0)) + '</b>' +
+          '<span>击杀</span><b>' + (st.kills != null ? st.kills : (lb.kills || 0)) + '</b>' +
+          '<span>经验</span><b>' + (st.xp || 0) + '</b>' +
+          '<span>存档更新</span><b>' + (p.save && p.save.updated_at ? String(p.save.updated_at).replace('T', ' ').slice(0, 16) : '—') + '</b>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h2>账号与密码</h2>' +
+        (p.hasAcct
+          ? '<div class="kv">' +
+              '<span>密码存储</span><b>PBKDF2-SHA256 加密</b>' +
+              '<span>密码原文</span><b style="color:var(--warn)">不可查看（加密单向存储）</b>' +
+              '<span>密码哈希</span><b style="word-break:break-all;font-size:11px">' + esc((p.acct && p.acct.hash ? String(p.acct.hash) : '').slice(0, 14)) + '…</b>' +
+            '</div>' +
+            '<div class="money-edit">' +
+              '<input id="npw-in" type="text" autocomplete="off" placeholder="设置新密码（至少 6 位）">' +
+              '<button class="btn pri" data-act="resetpw" type="button">重置密码</button>' +
+            '</div>' +
+            '<div class="money-edit">' +
+              '<input id="nick-in" type="text" autocomplete="off" placeholder="输入新昵称">' +
+              '<button class="btn" data-act="rename" type="button">改昵称</button>' +
+            '</div>'
+          : '<div class="lbl-sub">该玩家没有注册账号（仅存档），无密码可管理</div>') +
+      '</div>' +
+      '<div class="card">' +
+        '<h2>金币 · $' + gnum(p.money == null ? 0 : p.money) + '</h2>' +
+        '<div class="money-edit">' +
+          '<input id="money-in" type="number" placeholder="金额">' +
+          '<button class="btn pri" data-act="mset" type="button">设为</button>' +
+          '<button class="btn" data-act="madd" type="button">＋加</button>' +
+          '<button class="btn" data-act="msub" type="button">－减</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h2>装备（身上）</h2>' +
+        '<div class="kv">' +
+          ['weapon|武器', 'armor|护甲', 'pack|背包', 'rig|胸挂', 'med|医疗', 'safebox|安全箱'].map(function (s2) {
+            var k = s2.split('|')[0], lab = s2.split('|')[1];
+            var it = eq[k];
+            return '<span>' + lab + '</span><b class="' + (it ? 'r-' + esc(it.r) : '') + '">' + (it ? esc(it.n) + ' <button data-act="unequip" data-slot="' + k + '" type="button" style="margin-left:6px;padding:1px 8px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--sub);font-size:11px">卸下</button>' : '—') + '</b>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h2>仓库（' + (p.stash ? p.stash.length : 0) + ' 件）</h2>' +
+        '<div class="add-row" style="margin-bottom:12px">' +
+          '<select id="add-item">' + opts + '</select>' +
+          '<input id="add-num" type="number" value="1" min="1">' +
+          '<button class="btn pri" data-act="add" type="button">加入仓库</button>' +
+        '</div>' +
+        itemsHtml +
+      '</div>' +
+      '<div class="card">' +
+        '<h2 style="color:var(--err)">危险区</h2>' +
+        '<div class="lbl-sub">删除玩家将同时清除：账号、云存档、排行榜、好友关系、私聊记录、昵称表，不可恢复。</div>' +
+        '<button class="btn danger" data-act="delplayer" type="button">🗑 删除该玩家</button>' +
+      '</div>';
+
+    Array.prototype.forEach.call(box.querySelectorAll('[data-act]'), function (el) {
+      el.addEventListener('click', function () { onAct(el.getAttribute('data-act'), el); });
+    });
+    /* 物品格子点选 */
+    Array.prototype.forEach.call(box.querySelectorAll('.tile[data-key]'), function (el) {
+      el.addEventListener('click', function () {
+        selKey = (selKey === el.getAttribute('data-key')) ? '' : el.getAttribute('data-key');
+        renderDetail();
+      });
+    });
+  }
+
+  /* ---------- 写回存档 ---------- */
+  function pushSave(p, data) {
+    if (!p.save) {
+      /* 玩家还没有云存档 → 建一个最小存档 */
+      p.save = { user_id: p.uid, updated_at: null };
+    }
+    p.save.data = data;
+    data.ts = Date.now();
+    p.save.updated_at = new Date().toISOString();
+    p.stash = data.stash || [];
+    p.money = data.money;
+    return api('/rest/v1/saves?on_conflict=user_id', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ user_id: p.uid, data: data, updated_at: p.save.updated_at })
+    });
+  }
+  function ensureData(p) {
+    if (p.save && p.save.data) return p.save.data;
+    var d = { ver: 2, money: p.money == null ? 4500 : p.money, stash: [],
+              equip: { weapon: null, armor: null, pack: null, rig: null, med: null, safebox: null },
+              run: [], secure: [null, null], runActive: false,
+              stats: { runs: 0, extracts: 0, kills: 0, xp: 0 }, mapId: 'radar', kindStats: {}, ts: Date.now() };
+    return d;
+  }
+
+  function onAct(act, el) {
+    if (!sel) return;
+    var p = sel;
+    if (act === 'mset' || act === 'madd' || act === 'msub') {
+      var v = parseInt(document.getElementById('money-in').value, 10);
+      if (isNaN(v) || v < 0) { toast('请输入有效金额', 'err'); return; }
+      var d = ensureData(p);
+      d.money = act === 'mset' ? v : (act === 'madd' ? (d.money || 0) + v : Math.max(0, (d.money || 0) - v));
+      el.disabled = true;
+      pushSave(p, d).then(function () {
+        el.disabled = false; toast('金币已更新：$' + gnum(d.money), 'ok'); renderList(); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('失败：' + e.message, 'err'); });
+
+    } else if (act === 'add') {
+      var name = document.getElementById('add-item').value;
+      var num = Math.max(1, parseInt(document.getElementById('add-num').value, 10) || 1);
+      var def = defByName(name);
+      if (!def) { toast('物品定义不存在', 'err'); return; }
+      var d2 = ensureData(p);
+      for (var i = 0; i < num; i++) d2.stash.push(serFromDef(def));
+      el.disabled = true;
+      pushSave(p, d2).then(function () {
+        el.disabled = false; toast('已加入 ' + name + ' ×' + num, 'ok'); renderList(); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('失败：' + e.message, 'err'); });
+
+    } else if (act === 'plus' || act === 'minus') {
+      var key = el.getAttribute('data-key');
+      var d3 = ensureData(p);
+      var hit = false;
+      for (var j = d3.stash.length - 1; j >= 0; j--) {
+        var it = d3.stash[j];
+        if (!it) continue;
+        if ((it.n + '|' + it.r) === key) {
+          hit = true;
+          if (act === 'plus') { d3.stash.push(Object.assign({}, it)); break; }
+          d3.stash.splice(j, 1); break;
+        }
+      }
+      if (!hit) { toast('物品不存在', 'err'); return; }
+      el.disabled = true;
+      pushSave(p, d3).then(function () {
+        el.disabled = false; toast(act === 'plus' ? '已 +1' : '已移除 1 件', 'ok'); renderList(); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('失败：' + e.message, 'err'); });
+
+    } else if (act === 'unequip') {
+      var slot = el.getAttribute('data-slot');
+      var d4 = ensureData(p);
+      if (d4.equip && d4.equip[slot]) d4.equip[slot] = null;
+      el.disabled = true;
+      pushSave(p, d4).then(function () {
+        el.disabled = false; toast('已卸下', 'ok'); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('失败：' + e.message, 'err'); });
+
+    } else if (act === 'resetpw') {
+      var np = (document.getElementById('npw-in').value || '');
+      if (!p.hasAcct) { toast('该玩家没有账号', 'err'); return; }
+      if (np.length < 6) { toast('新密码至少 6 位', 'err'); return; }
+      el.disabled = true;
+      var salt = ubSalt();
+      ubHash(np, salt).then(function (h) {
+        return api('/rest/v1/users?uid=eq.' + p.uid, { method: 'PATCH', body: JSON.stringify({ salt: salt, hash: h }) });
+      }).then(function () {
+        el.disabled = false;
+        toast('「' + p.nick + '」的密码已重置，新密码：' + np, 'ok');
+        document.getElementById('npw-in').value = '';
+      }).catch(function (e) { el.disabled = false; toast('重置失败：' + e.message, 'err'); });
+
+    } else if (act === 'rename') {
+      var nn = (document.getElementById('nick-in').value || '').trim();
+      if (nn.length < 2 || nn.length > 16) { toast('昵称 2~16 个字', 'err'); return; }
+      if (/[@\s]/.test(nn)) { toast('昵称不能包含空格或 @', 'err'); return; }
+      if (nn === p.nick) { toast('昵称没有变化', 'err'); return; }
+      el.disabled = true;
+      Promise.all([
+        api('/rest/v1/users?uid=eq.' + p.uid, { method: 'PATCH', body: JSON.stringify({ nick: nn }) }),
+        api('/rest/v1/user_nicks?uid=eq.' + p.uid, { method: 'PATCH', body: JSON.stringify({ nick: nn }) }).catch(function () {})
+      ]).then(function () {
+        el.disabled = false;
+        var old = p.nick;
+        p.nick = nn;
+        if (p.acct) p.acct.nick = nn;
+        if (p.lb) p.lb.nick = nn;
+        toast('昵称已从「' + old + '」改为「' + nn + '」', 'ok');
+        renderList(); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('改名失败：' + e.message, 'err'); });
+
+    } else if (act === 'delplayer') {
+      /* W16.86：不再要求输入昵称，直接弹确认框 */
+      if (!confirm('确定删除「' + p.nick + '」？\n将同时清除账号、云存档、排行榜、好友、私聊，不可恢复！')) return;
+      el.disabled = true;
+      var uid = p.uid;
+      Promise.all([
+        api('/rest/v1/users?uid=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/saves?user_id=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/user_nicks?uid=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/leaderboard?user_id=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/friends?owner=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/friends?friend=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/messages?sender=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/messages?receiver=eq.' + uid, { method: 'DELETE' }).catch(function () {})
+      ]).then(function () {
+        toast('玩家「' + p.nick + '」已删除', 'ok');
+        sel = null;
+        return fetchAll();
+      }).catch(function (e) { el.disabled = false; toast('删除失败：' + e.message, 'err'); });
+    }
+  }
+
+  document.getElementById('btn-refresh').addEventListener('click', fetchAll);
+  document.getElementById('search').addEventListener('input', function () { filter = this.value; renderList(); });
+
+  /* W16.86：去掉密码门 —— 控制台页面直接进入，口令只在游戏设置视野页入口那里验证 */
+  function boot() { loadDefs().then(fetchAll); }
+  boot();
+})();
+</script>
+</body>
+</html>
