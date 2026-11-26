@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W16.98 2026-11-26 13:15';
+  var BUILD = 'W17.0 2026-11-26 22:10';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -518,6 +518,31 @@
     align-items:center; justify-content:center; gap:22px; cursor:pointer;
     background:radial-gradient(1200px 620px at 50% 40%, rgba(34,211,238,.12), transparent 65%), #000; }
   #intro-launch.gone { opacity:0; pointer-events:none; transition:opacity .4s ease; }
+/* W17.0：S1 赛季「源头」上线弹窗 */
+  #s1promo { position:fixed; inset:0; z-index:1500; display:none; align-items:center; justify-content:center; background:rgba(2,8,18,.78); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+  #s1promo.show { display:flex; }
+  .s1p-card { position:relative; width:min(520px, 92vw); border-radius:18px; padding:32px 28px 24px; text-align:center;
+    background:linear-gradient(160deg,#0d1b2e 0%,#0a1424 55%,#101c30 100%);
+    box-shadow:0 0 0 1px rgba(94,234,212,.22), 0 0 46px rgba(45,212,191,.16), 0 24px 60px rgba(0,0,0,.6);
+    animation:s1pIn .45s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes s1pIn { from { transform:translateY(26px) scale(.94); opacity:0; } }
+  .s1p-card::before { content:''; position:absolute; inset:-1px; border-radius:19px; padding:1px; pointer-events:none;
+    background:linear-gradient(120deg,#2dd4bf,#818cf8,#e879f9,#2dd4bf);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; }
+  .s1p-badge { display:inline-block; font-size:11px; letter-spacing:.3em; color:#5eead4; border:1px solid rgba(94,234,212,.4); border-radius:999px; padding:4px 14px 4px 17px; margin-bottom:13px; background:rgba(45,212,191,.08); }
+  .s1p-title { font-size:clamp(30px,8vw,38px); font-weight:800; letter-spacing:.3em; margin:0 0 6px;
+    background:linear-gradient(100deg,#5eead4 10%,#a5b4fc 55%,#f0abfc 90%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .s1p-sub { font-size:13px; color:#9db7cc; margin:0 0 16px; letter-spacing:.12em; }
+  .s1p-feats { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:0 0 16px; }
+  .s1p-feats span { font-size:12px; color:#c7d7e8; background:rgba(148,163,184,.1); border:1px solid rgba(148,163,184,.2); border-radius:8px; padding:6px 11px; }
+  .s1p-note { font-size:11.5px; color:#64748b; margin:0 0 18px; line-height:1.8; }
+  .s1p-note b { color:#94a3b8; font-weight:600; }
+  .s1p-btns { display:flex; gap:12px; }
+  .s1p-go { flex:1; min-height:50px; border:none; border-radius:12px; cursor:pointer; font-size:16px; font-weight:700; letter-spacing:.1em; color:#04121c;
+    background:linear-gradient(100deg,#2dd4bf,#38bdf8); box-shadow:0 6px 22px rgba(45,212,191,.35); }
+  .s1p-go:active { transform:translateY(1px); }
+  .s1p-stay { min-height:50px; padding:0 18px; border:1px solid rgba(148,163,184,.35); border-radius:12px; background:transparent; color:#94a3b8; font-size:13px; cursor:pointer; }
+  .s1p-x { position:absolute; top:10px; right:14px; width:32px; height:32px; border:none; border-radius:50%; background:rgba(148,163,184,.12); color:#94a3b8; font-size:18px; cursor:pointer; line-height:1; }
   .intro-logo { font-size:clamp(30px, 7vw, 52px); font-weight:700; letter-spacing:.16em; color:#e8f2ff;
     text-shadow:0 0 28px rgba(56,189,248,.55); }
   .intro-sub { font-size:11px; letter-spacing:.42em; color:#5f7391; margin-top:-12px; }
@@ -6635,6 +6660,30 @@ function refreshStartScreen() {
     '<span>仓库 ' + stash.length + ' 件</span>';
 }
 
+/* W17.0：S1 赛季「源头」上线提示 —— 每次进游戏首次回主菜单时弹一次，点了「更新」才切换 */
+var s1PromoShown = false;
+function s1PromoShow() {
+  if (s1PromoShown) return;
+  /* W17.0b：玩家点过一次（更新 / 留在 S0 / 关闭）就永久记住，以后绝不再弹 */
+  try { if (localStorage.getItem('s1.promo.done') === '1') return; } catch (e) {}
+  var ov = document.getElementById('s1promo');
+  if (!ov) return;
+  s1PromoShown = true;
+  ov.classList.add('show');
+}
+(function () {
+  function bind() {
+    var ov = document.getElementById('s1promo');
+    if (!ov) return;
+    function dismiss() { try { localStorage.setItem('s1.promo.done', '1'); } catch (e) {} }
+    document.getElementById('s1p-go').addEventListener('click', function () { dismiss(); location.href = 'S1.html'; });
+    document.getElementById('s1p-stay').addEventListener('click', function () { dismiss(); ov.classList.remove('show'); });
+    document.getElementById('s1p-x').addEventListener('click', function () { dismiss(); ov.classList.remove('show'); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
+
 function showMenu() {
   if (!runEnded && !player.dead) saveGame();
   annivMusicPlay();                              // W16.42：回大厅恢复纪念 BGM
@@ -6652,6 +6701,7 @@ function showMenu() {
   refreshStartScreen();
   fitStartScreen();
   setTimeout(fitStartScreen, 90);
+  setTimeout(s1PromoShow, 800);   /* W17.0：主菜单稳定后弹「源头上线」提示（每次进游戏弹一次） */
   if (typeof maybeAutoGift === 'function') maybeAutoGift();      // W16.1：新账号第一次进菜单弹福利
   document.getElementById('quick-start').focus({preventScroll:true});
 }
@@ -11078,6 +11128,11 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.0', t:'2026年11月26日 21:55', items:[
+    { k:'赛季', d:'S1 赛季「源头」提前上线！进游戏会弹出提示，点击「更新到源头赛季」即可切换，也可以留在 S0 继续玩' },
+    { k:'账号', d:'源头与正式服账号通用：正式服账号直接登录源头，源头注册的新账号正式服也能用' },
+    { k:'品牌', d:'S1 赛季定名「源头」，全新上线弹窗与入口' }
+  ]},
   { v:'W16.98', t:'2026年11月26日 13:15', items:[
     { k:'品牌', d:'游戏名改回《三角形突围》——听大家的，名字回归' }
   ]},
@@ -11377,5 +11432,21 @@ var CHANGELOG = [
   .dl-card .mp-actions { margin-top:4px; }
   @media (max-width:380px) { .dl-opts { flex-direction:column; } }
 </style>
+<div id="s1promo" role="dialog" aria-modal="true" aria-label="新赛季提示">
+  <div class="s1p-card">
+    <button class="s1p-x" id="s1p-x" type="button" aria-label="关闭">×</button>
+    <div class="s1p-badge">NEW · S1 赛季</div>
+    <h2 class="s1p-title">源 头</h2>
+    <div class="s1p-sub">S1 赛季已正式上线 · 提前开放</div>
+    <div class="s1p-feats">
+      <span>🗺️ 全新三图</span><span>🗝️ 房卡房间</span><span>🎒 卡包系统</span><span>🪖 头盔装备</span><span>💎 六大品质</span>
+    </div>
+    <p class="s1p-note">当前赛季：<b>S0 · 正式服</b>　|　账号通用，正式服账号可直接登录源头<br>进度独立互不影响，点下方按钮即更新进入</p>
+    <div class="s1p-btns">
+      <button class="s1p-go" id="s1p-go" type="button">🚀 更新到源头赛季</button>
+      <button class="s1p-stay" id="s1p-stay" type="button">留在 S0</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

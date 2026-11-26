@@ -170,7 +170,7 @@
   <div class="srcwin">
     <div class="srcbar">
       <b class="t">源码编辑</b>
-      <select id="srcfile"><option value="S1.html">S1.html · 测试服</option></select>
+      <select id="srcfile"><option value="S1.html">S1.html · 源头赛季</option></select>
       <button id="srcpull" type="button">↻ 拉取线上</button>
       <button id="srccheck" type="button">✓ 语法检查</button>
       <button id="srcfind" type="button">🔍 查找替换</button>
@@ -190,7 +190,7 @@
     </div>
     <div class="srcquick">
       <span class="qt">快速切换：</span>
-      <button type="button" data-qf="S1.html">S1 测试服</button>
+      <button type="button" data-qf="S1.html">源头 S1</button>
       <button type="button" data-qf="game.html">正式服 game</button>
       <button type="button" data-qf="index.html">入口页 index</button>
       <span class="sp" style="flex:1"></span>
@@ -1227,7 +1227,7 @@
   document.getElementById('srcdl').addEventListener('click', srcDownload);
   document.getElementById('routeapply').addEventListener('click', function () { routeApply(this); });
   document.getElementById('srcnew').addEventListener('click', function () { srcNew(this); });
-  /* 快速切换按钮（S1 测试服 / 正式服 / 入口页） */
+  /* 快速切换按钮（源头 S1 / 正式服 / 入口页） */
   function markQuick() {
     Array.prototype.forEach.call(document.querySelectorAll('.srcquick [data-qf]'), function (el) {
       if (el.getAttribute('data-qf') === srcEls.file.value) el.className = 'cur'; else el.className = '';
