@@ -834,8 +834,8 @@
      保证从聊天产物预览这种隔离环境里打开也能看到源码 */
   var SRC_MIRRORS = [
     '',
-    'https://raw.githubusercontent.com/honglang162/3/master/',
-    'https://honglang162.github.io/3/'
+    'https://honglang162.github.io/3/',
+    'https://raw.githubusercontent.com/honglang162/3/master/'
   ];
   function srcPull(file) {
     srcSay('拉取中…');
@@ -847,13 +847,18 @@
       var i = 0;
       function tryNext() {
         if (i >= SRC_MIRRORS.length) {
-          throw new Error('本页环境拉不到源码（多半是在聊天预览里打开的）。请从游戏网址打开本页，或填上 GitHub Token 再拉');
+          throw new Error('三个通道都拉不到。请检查网络，或填上 GitHub Token 再拉');
         }
         var base = SRC_MIRRORS[i++];
-        return fetch(base + file + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.text();
-        }).catch(function () { return tryNext(); });
+        srcSay('拉取中…（通道 ' + i + '/' + SRC_MIRRORS.length + '）');
+        var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+        var tm = ctl ? setTimeout(function () { try { ctl.abort(); } catch (e2) {} }, 12000) : null;
+        return fetch(base + file + '?t=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+          .then(function (r) {
+            if (tm) clearTimeout(tm);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.text();
+          }).catch(function () { if (tm) clearTimeout(tm); return tryNext(); });
       }
       return tryNext();
     });
