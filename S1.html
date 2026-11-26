@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.13 2026-11-26 13:15';
+  var BUILD = 'W17.14 2026-11-26 21:00';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -2349,6 +2349,11 @@ var STAR_ITEM = ITEM_DEFS.filter(function(d) { return d.name === '东洲之星';
 var KEYCARDS = ITEM_DEFS.filter(function(d) { return d.card; });      /* S1 W17.8：六种房卡 */
 var CARD_BY_KEY = {};                                                  /* 门锁键 → 房卡定义 */
 KEYCARDS.forEach(function(d) { CARD_BY_KEY[d.card] = d; });
+/* W17.14：房卡点数制 —— 每张卡 10 点；图1 刷一次扣 1 点 / 图2 扣 2 点 / 图3 扣 3 点，扣完卡作废。
+   剩余点数存在卡本体上（随存档持久化）：局内捡的卡、商店买的卡都是满点，撤离带回仓库不清零，下局接着用 */
+var CARD_MAX_PTS = 10;
+var CARD_SWIPE_COST = { radar:1, industrial:2, port:3 };
+function cardPts(it) { return (it && typeof it.pts === 'number' && it.pts > 0) ? it.pts : CARD_MAX_PTS; }
 var CARDPACK_DEF = ITEM_DEFS.filter(function(d) { return d.name === '简易卡包'; })[0];
 /* S1 W17.8：局内房卡掉落池 —— 按容器类型分池，越危险的箱子越容易出高价值房卡 */
 var CARD_DROPS = (function () {
@@ -2453,7 +2458,7 @@ function createItem(def) {
     equip:def.equip || null, armor:def.armor || 0, slotBonus:def.slotBonus || 0, heal:def.heal || 0 };
   if (def.secure) it.secure = def.secure;     // W6：安全箱保底格数
   if (def.cards) it.cards = def.cards;        // S1 W17.8：卡包卡位数
-  if (def.card) it.card = def.card;           // S1 W17.8：房卡门锁键
+  if (def.card) { it.card = def.card; it.pts = CARD_MAX_PTS; }   // S1 W17.8：房卡门锁键；W17.14：新卡满 10 点
   if (def.room) it.room = def.room;           // S1 W17.8：房卡对应的房间名
   if (def.noSell) it.noSell = true;
   if (def.level) it.level = def.level;
@@ -3139,7 +3144,8 @@ function bagValue() { return bag.reduce(function(sum, it) { return sum + (it ? i
 /* ---------- 存档 ---------- */
 function serItem(it) {
   return it ? { n:it.name, r:it.rarity, v:it.value, k:it.kind, e:it.equip, a:it.armor,
-    b:it.slotBonus, h:it.heal, l:it.look, s:it.secure || 0, cp:it.cards || 0, cd:it.card || null } : null;
+    b:it.slotBonus, h:it.heal, l:it.look, s:it.secure || 0, cp:it.cards || 0, cd:it.card || null,
+    pt:(it.card ? cardPts(it) : null) } : null;   /* W17.14：房卡剩余点数随存档保存 */
 }
 function deItem(o) {
   if (!o) return null;
@@ -3151,6 +3157,7 @@ function deItem(o) {
   if (o.cp) it.cards = o.cp;
   if (o.cd) it.card = o.cd;
   if (nm !== o.n) { var nd = ITEM_DEFS.filter(function(d) { return d.name === nm; })[0]; if (nd) { it.value = nd.value; it.card = nd.card; } }
+  if (it.card) it.pts = (typeof o.pt === 'number' && o.pt > 0) ? o.pt : CARD_MAX_PTS;   /* W17.14：房卡点数（旧存档默认满 10 点） */
   return it;
 }
 function saveGame() {
@@ -3367,14 +3374,14 @@ function renderLoadout() {
         if (card) b.dataset.rarity = card.rarity;
         b.innerHTML = (card ? itemIcon(card) : '') + '<span class="eq-label">卡位 ' + (i + 1) + '</span>' +
           '<span class="eq-main"><span class="eq-name">' + (card ? card.short : '— 空 —') + '</span>' +
-          '<span class="eq-meta">' + (card ? (card.room || '加密房间') : '仓库点房卡「装入」') + '</span></span>';
-        if (card) b.title = card.name + '（点击取回仓库）';
+          '<span class="eq-meta">' + (card ? ((card.room || '加密房间') + ' · 剩 ' + cardPts(card) + '/' + CARD_MAX_PTS + ' 点') : '仓库点房卡「装入」') + '</span></span>';
+        if (card) b.title = card.name + ' · 剩 ' + cardPts(card) + '/' + CARD_MAX_PTS + ' 点（点击取回仓库）';
         if (card) b.addEventListener('click', function() { pullCard(i); });
         cpWrap.appendChild(b);
       })(ci);
     }
     var cpHint = document.getElementById('cardpack-hint');
-    if (cpHint) cpHint.textContent = '卡包 ' + cardpackCount() + ' / ' + cpN + ' · 房卡只能装进卡包带进局内，刷卡后消耗（点击卡位取回仓库）';
+    if (cpHint) cpHint.textContent = '卡包 ' + cardpackCount() + ' / ' + cpN + ' · 每卡 10 点：图1 刷 1 点 / 图2 刷 2 点 / 图3 刷 3 点，扣完作废；放回仓库点数保留（点击卡位取回）';
   }
   var w = currentWeapon(), g = gunStats(), gearGrid = document.getElementById('loadout-gear-grid');
   var stats = [
@@ -3430,8 +3437,9 @@ function renderStash() {
     cell.className = 'slot'; cell.dataset.rarity = it.rarity;
     cell.setAttribute('aria-label', it.name);
     cell.innerHTML = itemIcon(it) +
-      '<span class="slot-name">' + it.short + '</span><span class="slot-value">$' + it.value + '</span>';
-    cell.title = it.name + ' · ' + RARITIES[it.rarity].name + ' · ' + itemMetaText(it);
+      '<span class="slot-name">' + it.short + '</span><span class="slot-value">' +
+      (it.card ? ('剩 ' + cardPts(it) + '/' + CARD_MAX_PTS + ' 点') : ('$' + it.value)) + '</span>';
+    cell.title = it.name + ' · ' + RARITIES[it.rarity].name + ' · ' + itemMetaText(it) + (it.card ? ' · 剩 ' + cardPts(it) + ' 点' : '');
     card.appendChild(cell);
     if (it.equip) {
       var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'ghost-btn price-btn';
@@ -3937,7 +3945,7 @@ function showDetail(it) {
     '<strong>' + it.name + '</strong><span class="rarity-text ' + it.rarity + '-text">' +
     RARITIES[it.rarity].name + '</span><br>' + it.kind + ' · 参考价值 $' + it.value + ' · 占用 1 格' +
     (it.equip ? ' · 可装备到「' + slotName[it.equip] + '」' : '') +
-    (it.card ? ' · 可装入卡包，刷开「' + (it.room || '加密房间') + '」' : '');
+    (it.card ? ' · 可装入卡包，刷开「' + (it.room || '加密房间') + '」 · 剩 ' + cardPts(it) + '/' + CARD_MAX_PTS + ' 点' : '');
 }
 function updateDropState() {
   var sel = selectedItem ? slotsFor(selectedItem.source)[selectedItem.index] : null;
@@ -6899,12 +6907,19 @@ var KEY_ROOM_PLANS = {
 };
 /* 房内物资（相对房间左上角的偏移）—— 品质越高箱子越多越值钱 */
 var ROOM_LOOT = {
-  supply:  [[110,150,'supply'], [310,150,'supply']],
-  medical: [[100,150,'medical'], [230,150,'medical'], [360,150,'supply']],
-  weapon:  [[100,150,'weapon'],  [230,150,'weapon'],  [360,150,'safe']],
-  intel:   [[100,150,'safe'],    [230,150,'safe'],    [360,150,'medical']],
-  studio:  [[110,110,'safe'],    [310,110,'safe'],    [110,240,'safe'], [310,240,'weapon']],
-  origin:  [[110,110,'safe'],    [310,110,'safe'],    [110,240,'safe'], [310,240,'safe']]
+  /* W17.14：房间 460×360，容器铺满整间 —— 白/绿/蓝房 6 箱，金/红房 8 箱（原来只有 2~4 箱） */
+  supply:  [[70,110,'supply'],  [190,110,'supply'],  [310,110,'supply'],
+            [70,250,'supply'],  [190,250,'supply'],  [310,250,'supply']],
+  medical: [[70,110,'medical'], [190,110,'medical'], [310,110,'medical'],
+            [70,250,'medical'], [190,250,'supply'],  [310,250,'supply']],
+  weapon:  [[70,110,'weapon'],  [190,110,'weapon'],  [310,110,'weapon'],
+            [70,250,'weapon'],  [190,250,'safe'],    [310,250,'weapon']],
+  intel:   [[70,110,'safe'],    [190,110,'safe'],    [310,110,'medical'],
+            [70,250,'safe'],    [190,250,'medical'], [310,250,'safe']],
+  studio:  [[60,100,'safe'],    [160,100,'safe'],    [260,100,'safe'],   [360,100,'weapon'],
+            [60,250,'safe'],    [160,250,'safe'],    [260,250,'weapon'], [360,250,'safe']],
+  origin:  [[60,100,'safe'],    [160,100,'safe'],    [260,100,'safe'],   [360,100,'safe'],
+            [60,250,'safe'],    [160,250,'safe'],    [260,250,'safe'],   [360,250,'safe']]
 };
 var keyRoomDoors = [];     /* 本局所有还没刷开的房卡门（可交互） */
 (function () {
@@ -7055,16 +7070,26 @@ function tryOpenKeyRoom(door) {
       (def ? Math.round(def.value * BUY_RATE) : '?') + ' 有售');
     return;
   }
-  CARDPACK_SLOTS[ci] = null;                    /* 刷卡消耗一张 */
+  /* W17.14：点数制刷卡 —— 图1 扣 1 点 / 图2 扣 2 点 / 图3 扣 3 点，扣完卡当场作废 */
+  var cardIt = CARDPACK_SLOTS[ci];
+  var cost = CARD_SWIPE_COST[(selectedMap && selectedMap.id) || 'radar'] || 1;
+  var left = cardPts(cardIt) - cost;
   walls = walls.filter(function (w) { return w !== door.wall; });
   door.opened = true;
   var k = keyRoomDoors.indexOf(door);
   if (k >= 0) keyRoomDoors.splice(k, 1);
   nearestKeyDoor = null;
   buildWallGrid();
-  showToast('刷卡成功 · 「' + door.name + '」已开启（消耗 ' + (def ? def.name : '房卡') + '）');
+  if (left <= 0) {
+    CARDPACK_SLOTS[ci] = null;                /* 点数耗尽 → 卡消失 */
+    showToast('刷卡成功 · 「' + door.name + '」已开启（- ' + cost + ' 点 · ' + (cardIt ? cardIt.name : '房卡') + ' 点数耗尽已作废）');
+  } else {
+    cardIt.pts = left;                        /* 剩余点数留在卡上，带回仓库不清零 */
+    showToast('刷卡成功 · 「' + door.name + '」已开启（' + (cardIt ? cardIt.name : '房卡') + ' - ' + cost + ' 点 · 剩 ' + left + ' 点）');
+  }
   saveGame();
   if (lootOpen) renderLoot();
+  renderLoadout();
 }
 function inMenu() { return document.body.classList.contains('in-menu'); }
 function renderMapCard() {
@@ -11646,6 +11671,11 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.14', t:'2026年11月26日 21:00', items:[
+    { k:'新增', d:'房卡改点数制：每张房卡 10 点。山地雷达站刷一次扣 1 点、废弃工业区扣 2 点、港口仓储区扣 3 点；点数扣完卡当场作废' },
+    { k:'调整', d:'房卡点数跟着卡走：局内摸到的卡、商店买的卡都是 10 点；撤离带回仓库不清零，下局接着用（仓库/卡位都会显示「剩 X/10 点」）' },
+    { k:'新增', d:'每个房卡房间的容器加量：白/绿/蓝品质房 6 箱、金/红品质房 8 箱（原来只有 2~4 箱），整间房铺满保险箱' }
+  ]},
   { v:'W17.13', t:'2026年11月26日 13:15', items:[
     { k:'品牌', d:'游戏名改回《三角形突围》——听大家的，名字回归' },
     { k:'重构', d:'房卡房间全部外置：不再挤在地图角上，改为直接挂在地图外墙的外侧（上下边各 2 个、左右各 1 个），门就是边墙上的一段门板，刷卡后边墙开门进入' },
