@@ -149,10 +149,11 @@
 
 <div id="app">
   <header>
-    <h1>开发者控制台</h1>
+    <h1>开发者控制台 <span class="stat" id="hdr-ver"></span></h1>
     <span class="stat" id="hdr-stat">加载中…</span>
     <a class="refresh" href="/game.html" target="_blank">返回游戏</a>
     <button class="refresh mla acc" id="btn-src" type="button">⌨ 源码</button>
+    <button class="refresh mla" id="btn-upd" type="button">⇡ 检查更新</button>
     <button class="refresh mla" id="btn-refresh" type="button">↻ 刷新</button>
   </header>
   <div id="wrap">
@@ -227,6 +228,8 @@
 <script>
 (function () {
   'use strict';
+  /* 控制台自身版本号 —— 每次改完 dev.html 记得同步改这里，玩家端「检查更新」靠它对比 */
+  var DEV_VERSION = 'W16.99c';
   /* ---------- 后端（与游戏同一套 anon 通道） ---------- */
   var SB_URL = 'https://a189ce61ac0be9d3b.app.workbuddy.host';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k';
@@ -319,14 +322,29 @@
     return { n: '?', r: 'common', cnt: 0 };
   }
 
+  /* 网络重试：手机弱网下云端请求偶发 Failed to fetch，自动补试 2 次 */
+  function withRetry(fn, n) {
+    var tries = 0;
+    function attempt() {
+      tries++;
+      return fn().catch(function (e) {
+        if (tries >= n) throw e;
+        return new Promise(function (res) { setTimeout(res, 1200 * tries); }).then(attempt);
+      });
+    }
+    return attempt();
+  }
+
   function fetchAll() {
     setStatus('加载中…');
-    return Promise.all([
-      api('/rest/v1/users?select=uid,nick,v,salt,hash&order=nick.asc'),
-      api('/rest/v1/saves?select=user_id,data,updated_at'),
-      api('/rest/v1/user_nicks?select=uid,nick').catch(function () { return []; }),
-      api('/rest/v1/leaderboard?select=user_id,nick,total,money,kills,extracts').catch(function () { return []; })
-    ]).then(function (r) {
+    return withRetry(function () {
+      return Promise.all([
+        api('/rest/v1/users?select=uid,nick,v,salt,hash&order=nick.asc'),
+        api('/rest/v1/saves?select=user_id,data,updated_at'),
+        api('/rest/v1/user_nicks?select=uid,nick').catch(function () { return []; }),
+        api('/rest/v1/leaderboard?select=user_id,nick,total,money,kills,extracts').catch(function () { return []; })
+      ]);
+    }, 3).then(function (r) {
       var users = r[0] || [], saves = r[1] || [], nicks = r[2] || [], lb = r[3] || [];
       var map = {}, nickRows = {};
       users.forEach(function (u) { map[u.uid] = { uid: u.uid, nick: u.nick, hasAcct: true, acct: u, save: null, lb: null }; });
@@ -355,7 +373,11 @@
       renderList();
       if (sel) renderDetail();
       setStatus(players.length + ' 名玩家');
-    }).catch(function (e) { setStatus('加载失败：' + e.message); toast('加载失败：' + e.message, 'err'); });
+    }).catch(function (e) {
+      var m = /fetch/i.test(String(e.message)) ? '网络打不到云端（点右上角「↻ 刷新」重试）' : e.message;
+      setStatus('加载失败：' + m);
+      toast('加载失败：' + m, 'err');
+    });
   }
   function setStatus(s) { document.getElementById('hdr-stat').textContent = s; }
 
@@ -1250,8 +1272,83 @@
     try { localStorage.setItem(TOK_LS, this.value.trim()); } catch (e) {}
   });
 
+  /* ---------- 控制台自身更新检测（对比 GitHub 上的 DEV_VERSION） ---------- */
+  var UPD_MIRRORS = [
+    'https://honglang162.github.io/3/dev.html',
+    'https://raw.githubusercontent.com/honglang162/3/master/dev.html'
+  ];
+  var updPending = '';
+  /* 版本号比较：'W16.100c' > 'W16.99c' 这类也能比对 */
+  function verNewer(a, b) {
+    var pa = String(a).replace(/^v/i, '').split(/[.\-]/), pb = String(b).replace(/^v/i, '').split(/[.\-]/);
+    for (var i = 0; i < Math.max(pa.length, pb.length); i++) {
+      var x = parseInt(pa[i], 10) || 0, y = parseInt(pb[i], 10) || 0;
+      if (x !== y) return x > y;
+    }
+    return String(a) > String(b);
+  }
+  function updBtnReset() {
+    var b = document.getElementById('btn-upd');
+    b.disabled = false;
+    b.textContent = updPending ? '⇡ 更新到 ' + updPending : '⇡ 检查更新';
+    b.className = 'refresh mla' + (updPending ? ' acc' : '');
+  }
+  function checkUpdate(manual) {
+    var b = document.getElementById('btn-upd');
+    b.disabled = true;
+    b.textContent = '检查中…';
+    var i = 0;
+    function tryNext() {
+      if (i >= UPD_MIRRORS.length) return done('');
+      var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+      var tm = ctl ? setTimeout(function () { try { ctl.abort(); } catch (e) {} }, 10000) : null;
+      fetch(UPD_MIRRORS[i++] + '?t=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+        .then(function (r) {
+          if (tm) clearTimeout(tm);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function (t) {
+          var m = t.match(/DEV_VERSION\s*=\s*'([^']+)'/);
+          return done(m ? m[1] : '');
+        })
+        .catch(function () { if (tm) clearTimeout(tm); return tryNext(); });
+    }
+    function done(remote) {
+      updPending = '';
+      if (!remote) {
+        updBtnReset();
+        if (manual) toast('检查失败：网络打不到 GitHub，稍后再试', 'err');
+        return;
+      }
+      if (remote === DEV_VERSION) {
+        updBtnReset();
+        if (manual) toast('已是最新版本 v' + DEV_VERSION, 'ok');
+        return;
+      }
+      if (!verNewer(remote, DEV_VERSION)) {
+        updBtnReset();
+        if (manual) toast('本地 v' + DEV_VERSION + ' 比线上 v' + remote + ' 还新，无需更新', 'ok');
+        return;
+      }
+      /* 有新版本：按钮变蓝，再点一下就跳到最新版 */
+      updPending = remote;
+      updBtnReset();
+      toast('控制台有新版本 v' + remote + '（当前 v' + DEV_VERSION + '）· 点「⇡ 更新到 ' + remote + '」立即升级', 'ok');
+    }
+    tryNext();
+  }
+  document.getElementById('btn-upd').addEventListener('click', function () {
+    if (updPending) { location.href = 'https://honglang162.github.io/3/dev.html?upd=' + Date.now(); return; }
+    checkUpdate(true);
+  });
+
   /* W16.86：去掉密码门 —— 控制台页面直接进入，口令只在游戏设置视野页入口那里验证 */
-  function boot() { loadDefs().then(fetchAll); }
+  function boot() {
+    document.getElementById('hdr-ver').textContent = 'v' + DEV_VERSION;
+    loadDefs().then(fetchAll);
+    setTimeout(function () { checkUpdate(false); }, 2500);   /* 打开后自动查一次新版本 */
+  }
   boot();
 })();
 </script>
