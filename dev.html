@@ -110,6 +110,13 @@
   .srcroute .rs { font-size:11.5px; }
   .srcroute .rs.ok { color:var(--ok); } .srcroute .rs.err { color:var(--err); }
   .srcroute .rh { font-size:11px; color:#54697f; }
+  .srcquick { display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--line);
+              background:#0b1322; flex-wrap:wrap; font-size:12px; color:var(--sub); }
+  .srcquick button { padding:5px 11px; border-radius:14px; border:1px solid var(--line); background:#141e30;
+              color:var(--txt); font-size:12px; }
+  .srcquick button:hover { border-color:var(--cyan); color:var(--cyan); }
+  .srcquick button.cur { border-color:var(--cyan); color:var(--cyan); background:#10283c; }
+  .srcquick #srcnew { border-color:#2c6e45; color:#4ade80; }
   #srcgutter { padding:8px 8px 8px 10px; text-align:right; color:#3f5570; background:#0a111f;
                font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
                overflow:hidden; user-select:none; border-right:1px solid var(--line); margin:0; }
@@ -179,6 +186,14 @@
       <span id="routestat" class="rs">—</span>
       <span class="sp" style="flex:1"></span>
       <span class="rh">改完立即生效 · 全服玩家下次打开就进这个文件</span>
+    </div>
+    <div class="srcquick">
+      <span class="qt">快速切换：</span>
+      <button type="button" data-qf="S1.html">S1 测试服</button>
+      <button type="button" data-qf="game.html">正式服 game</button>
+      <button type="button" data-qf="index.html">入口页 index</button>
+      <span class="sp" style="flex:1"></span>
+      <button id="srcnew" type="button">➕ 新建 HTML</button>
     </div>
     <div class="srcbody">
       <pre id="srcgutter"></pre>
@@ -872,6 +887,7 @@
       srcEls.ta.value = txt;
       srcBase = txt; srcLoaded = file;
       srcRefreshGutter();
+      markQuick();
       var kb = Math.round(txt.length / 1024);
       srcSay('已加载 ' + file + ' · ' + kb + ' KB', 'ok');
     }).catch(function (e) {
@@ -1086,17 +1102,57 @@
   function routeApply(btn) {
     var t = srcEls.rfile.value;
     if (!t) { routeSay('先选一个文件', 'err'); return; }
-    if (!confirm('把正式网址 «/» 的入口改成：\n' + t + '\n\n确认后全服玩家下次打开首页就进这个文件。')) return;
+    /* 两段式确认：不依赖 confirm()（部分手机浏览器会拦截弹窗，导致选了却不生效） */
+    if (btn.getAttribute('data-arm') !== '1') {
+      btn.setAttribute('data-arm', '1');
+      btn.textContent = '确认切到 ' + t.replace(/^.*\//, '') + '？';
+      setTimeout(function () {
+        btn.setAttribute('data-arm', '');
+        btn.textContent = '应用';
+      }, 4000);
+      return;
+    }
+    btn.setAttribute('data-arm', '');
+    btn.textContent = '应用';
     btn.disabled = true;
+    routeSay('写入中…');
     api('/rest/v1/saves?on_conflict=user_id', {
       method: 'POST',
       headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({ user_id: '__dev_route', data: { target: t, ts: Date.now() }, updated_at: new Date().toISOString() })
     }).then(function () {
       btn.disabled = false;
-      routeSay('✔ 已切到 ' + t, 'ok');
+      /* 同源写本机缓存：本机打开正式网址立即生效；其他设备下次打开走云端新值 */
+      try { localStorage.setItem('rt_cache', JSON.stringify({ target: t, ts: Date.now() })); } catch (e) {}
+      routeSay('✔ 已切到 ' + t + '（本机立即生效）', 'ok');
       toast('正式网址入口已改为 ' + t, 'ok');
     }).catch(function (e) { btn.disabled = false; routeSay('失败：' + e.message, 'err'); });
+  }
+
+  /* ---- 新建 HTML 文件（提交到仓库，Pages 构建后可访问） ---- */
+  function srcNew(btn) {
+    var name = prompt('新文件名（只用英文 / 数字 / 横线，结尾 .html）：');
+    if (!name) return;
+    name = name.trim();
+    if (!/^[A-Za-z0-9_-]+\.html$/i.test(name)) { srcSay('文件名不合法：只能英文/数字/横线 + .html', 'err'); return; }
+    if ((allFiles || []).indexOf(name) >= 0) { srcSay(name + ' 已经存在，换一个名字', 'err'); return; }
+    var hasContent = srcBase && srcEls.ta.value && srcEls.ta.value !== '加载中…';
+    var copy = hasContent && confirm('以当前编辑器内容（' + srcEls.file.value + '）为模板新建？\n取消 = 建一个空白页面');
+    var text = copy ? srcEls.ta.value :
+      '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>' + name.replace(/\.html$/i, '') + '</title>\n</head>\n<body>\n<script>\n(function () {\n  \'use strict\';\n})();\n</' + 'script>\n</body>\n</html>\n';
+    btn.disabled = true;
+    srcSay('创建 ' + name + ' …');
+    ghCommit([{ path: name, text: text }], 'dev.html 新建页面 ' + name).then(function () {
+      btn.disabled = false;
+      allFiles = null;
+      return loadFileList(true).then(function () {
+        if ((allFiles || []).indexOf(name) >= 0) srcEls.file.value = name;
+        srcLoaded = '';
+        srcLoad(name, true);
+        srcSay('✔ 已创建 ' + name + ' · Pages 构建后（30~90 秒）即可访问', 'ok');
+        toast('已创建 ' + name, 'ok');
+      });
+    }).catch(function (e) { btn.disabled = false; srcSay('创建失败：' + e.message, 'err'); });
   }
 
   /* ---- 口令门 & 开合 ---- */
@@ -1148,6 +1204,23 @@
   document.getElementById('srcfind').addEventListener('click', srcFind);
   document.getElementById('srcdl').addEventListener('click', srcDownload);
   document.getElementById('routeapply').addEventListener('click', function () { routeApply(this); });
+  document.getElementById('srcnew').addEventListener('click', function () { srcNew(this); });
+  /* 快速切换按钮（S1 测试服 / 正式服 / 入口页） */
+  function markQuick() {
+    Array.prototype.forEach.call(document.querySelectorAll('.srcquick [data-qf]'), function (el) {
+      if (el.getAttribute('data-qf') === srcEls.file.value) el.className = 'cur'; else el.className = '';
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.srcquick [data-qf]'), function (el) {
+    el.addEventListener('click', function () {
+      var f = el.getAttribute('data-qf');
+      if (!allFiles || allFiles.indexOf(f) < 0) { srcSay('文件列表还没加载好，稍等一下', 'err'); return; }
+      if (srcEls.ta.value !== srcBase && srcBase && !confirm('当前有未同步的改动，切换会丢失，继续？')) return;
+      srcEls.file.value = f;
+      srcLoaded = '';
+      srcLoad(f, true);
+    });
+  });
   document.getElementById('srcpush').addEventListener('click', function () { srcPush(this); });
   srcEls.file.addEventListener('change', function () {
     if (srcEls.ta.value !== srcBase && srcBase && !confirm('切换文件会丢掉当前未同步的改动，继续？')) {

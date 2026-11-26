@@ -48,23 +48,48 @@
     location.replace(target + (location.search || ''));
   }
 
-  /* 兜底：1.6 秒内拿不到配置就直接进正式服，绝不让玩家卡在白屏 */
-  var guard = setTimeout(function () { go(DEFAULT_TARGET); }, 1600);
-
+  /* W16.99b：本机缓存上次的目标（dev.html 切入口时会同源写这份缓存），
+     有缓存立即跳转 —— 弱网/超时也不会再落回 game.html；
+     没缓存才等网络（最多 4 秒），同时把结果写进缓存供下次秒开。 */
+  var cached = null;
   try {
-    var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
-    if (ctl) setTimeout(function () { try { ctl.abort(); } catch (e) {} }, 1500);
-    fetch(SB_URL + '/rest/v1/saves?user_id=eq.__dev_route&select=data&sharecode=' + SB_SHARE, {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY },
-      cache: 'no-store',
-      signal: ctl ? ctl.signal : undefined
-    }).then(function (r) { return r.json(); }).then(function (rows) {
-      clearTimeout(guard);
-      var d = rows && rows[0] && rows[0].data;
-      if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
-      go((d && d.target) || DEFAULT_TARGET);
-    }).catch(function () { clearTimeout(guard); go(DEFAULT_TARGET); });
-  } catch (e) { clearTimeout(guard); go(DEFAULT_TARGET); }
+    cached = JSON.parse(localStorage.getItem('rt_cache') || 'null');
+  } catch (e) { cached = null; }
+  if (cached && cached.target) {
+    go(cached.target);
+    /* 后台静默刷新缓存，不改本次落点 */
+    try {
+      fetch(SB_URL + '/rest/v1/saves?user_id=eq.__dev_route&select=data&sharecode=' + SB_SHARE, {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store'
+      }).then(function (r) { return r.json(); }).then(function (rows) {
+        var d = rows && rows[0] && rows[0].data;
+        if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
+        var t = d && d.target;
+        if (t && /^[\w][\w\-./]*\.html$/i.test(t) && !/(^|\/)index\.html$/i.test(t)) {
+          localStorage.setItem('rt_cache', JSON.stringify({ target: t, ts: Date.now() }));
+        }
+      }).catch(function () {});
+    } catch (e) {}
+  } else {
+    /* 首次使用：等网络，最多 4 秒 */
+    var guard = setTimeout(function () { go(DEFAULT_TARGET); }, 4000);
+    try {
+      var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+      if (ctl) setTimeout(function () { try { ctl.abort(); } catch (e) {} }, 3800);
+      fetch(SB_URL + '/rest/v1/saves?user_id=eq.__dev_route&select=data&sharecode=' + SB_SHARE, {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY },
+        cache: 'no-store',
+        signal: ctl ? ctl.signal : undefined
+      }).then(function (r) { return r.json(); }).then(function (rows) {
+        clearTimeout(guard);
+        var d = rows && rows[0] && rows[0].data;
+        if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
+        var t = (d && d.target) || DEFAULT_TARGET;
+        try { localStorage.setItem('rt_cache', JSON.stringify({ target: t, ts: Date.now() })); } catch (e) {}
+        go(t);
+      }).catch(function () { clearTimeout(guard); go(DEFAULT_TARGET); });
+    } catch (e) { clearTimeout(guard); go(DEFAULT_TARGET); }
+  }
 })();
 </script>
 </body>
