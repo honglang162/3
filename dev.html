@@ -100,6 +100,16 @@
   .srcbar button.pri { background:var(--cyan); border-color:var(--cyan); color:#04121c; font-weight:700; }
   .srcbar .sp { flex:1; }
   .srcbody { flex:1; display:flex; min-height:0; background:#070c14; }
+  .srcroute { display:flex; align-items:center; gap:8px; padding:7px 10px; border-bottom:1px solid var(--line);
+              background:#0e1727; flex-wrap:wrap; font-size:12px; color:var(--sub); }
+  .srcroute .rt b { color:var(--cyan); }
+  .srcroute select { padding:6px 8px; border-radius:7px; border:1px solid #2b4a63; background:#0d1420;
+              color:var(--txt); outline:none; font-size:12px; max-width:330px; }
+  .srcroute button { padding:6px 12px; border-radius:7px; border:1px solid #2b4a63; background:#16283c;
+              color:var(--cyan); font-size:12px; }
+  .srcroute .rs { font-size:11.5px; }
+  .srcroute .rs.ok { color:var(--ok); } .srcroute .rs.err { color:var(--err); }
+  .srcroute .rh { font-size:11px; color:#54697f; }
   #srcgutter { padding:8px 8px 8px 10px; text-align:right; color:#3f5570; background:#0a111f;
                font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
                overflow:hidden; user-select:none; border-right:1px solid var(--line); margin:0; }
@@ -152,11 +162,7 @@
   <div class="srcwin">
     <div class="srcbar">
       <b class="t">源码编辑</b>
-      <select id="srcfile">
-        <option value="S1.html">S1.html · 测试服</option>
-        <option value="game.html">game.html · 正式服</option>
-        <option value="index.html">index.html · 正式服首页</option>
-      </select>
+      <select id="srcfile"><option value="S1.html">S1.html · 测试服</option></select>
       <button id="srcpull" type="button">↻ 拉取线上</button>
       <button id="srccheck" type="button">✓ 语法检查</button>
       <button id="srcfind" type="button">🔍 查找替换</button>
@@ -166,6 +172,14 @@
       <button id="srcpush" class="pri" type="button">⤴ 同步到线上</button>
       <button id="srcclose" type="button">✕</button>
     </div>
+    <div class="srcroute">
+      <span class="rt">正式网址 <b>/</b> 打开：</span>
+      <select id="routefile"><option value="">读取中…</option></select>
+      <button id="routeapply" type="button">应用</button>
+      <span id="routestat" class="rs">—</span>
+      <span class="sp" style="flex:1"></span>
+      <span class="rh">改完立即生效 · 全服玩家下次打开就进这个文件</span>
+    </div>
     <div class="srcbody">
       <pre id="srcgutter"></pre>
       <textarea id="srcta" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off"></textarea>
@@ -174,7 +188,7 @@
       <span id="srcstat">未加载</span>
       <span id="srcmsg"></span>
       <span class="sp" style="flex:1"></span>
-      <span style="color:#54697f">同步走 GitHub → Pages 自动重建，正式服约 30~90 秒生效</span>
+      <span style="color:#54697f">同步走 GitHub → Pages 自动重建，约 30~90 秒生效</span>
     </div>
   </div>
 </div>
@@ -310,7 +324,7 @@
         map[s.user_id].save = s;
       });
       lb.forEach(function (l) { if (map[l.user_id]) map[l.user_id].lb = l; else if (!map[l.user_id]) map[l.user_id] = { uid: l.user_id, nick: l.nick, hasAcct: false, save: null, lb: l }; });
-      players = Object.keys(map).map(function (k) {
+      players = Object.keys(map).filter(function (k) { return k.indexOf('__') !== 0; }).map(function (k) {
         var p = map[k];
         if (!p.nick && p.save && p.save.data && p.save.data.nick) p.nick = p.save.data.nick;
         if (!p.nick) p.nick = '未知玩家';
@@ -735,7 +749,7 @@
        Pages 自动重建，不需要本地发布；game.html 会连带 index.html 一起提交，
        保证两个文件永远同一版本
      ================================================================== */
-  var SRC_PASS = 'honglang2026';                 /* ← 主策划进入口令，想换就改这里 */
+  var SRC_PASS = '231928zxcvbnm';                /* ← 主策划进入口令，想换就改这里 */
   var GH_REPO = 'honglang162/3';
   var GH_BRANCH = 'master';
   var SRC_FILES = ['S1.html', 'game.html', 'index.html'];
@@ -749,7 +763,9 @@
     file: document.getElementById('srcfile'),
     tok: document.getElementById('srctok'),
     stat: document.getElementById('srcstat'),
-    msg: document.getElementById('srcmsg')
+    msg: document.getElementById('srcmsg'),
+    rfile: document.getElementById('routefile'),
+    rstat: document.getElementById('routestat')
   };
   var srcBase = '';          /* 拉取时的原文，用于判断是否有改动 / 还原 */
   var srcSha = '';           /* 当前文件远端 commit sha（仅用于显示） */
@@ -880,9 +896,7 @@
     if (!text || text === '加载中…') { srcSay('没有内容可同步', 'err'); return; }
     if (text === srcBase) { srcSay('和线上完全一致，无需同步', ''); return; }
     var files = [{ path: file, text: text }];
-    if (file === 'game.html') files.push({ path: 'index.html', text: text });
-    var extra = files.length > 1 ? '（含 index.html）' : '';
-    if (!confirm('同步 ' + file + extra + ' 到线上？\n将提交到 GitHub，Pages 自动重建，约 30~90 秒生效。')) return;
+    if (!confirm('同步 ' + file + ' 到线上？\n将提交到 GitHub，Pages 自动重建，约 30~90 秒生效。')) return;
     btn.disabled = true;
     srcSay('提交中…');
     var msg = 'dev.html 在线源码同步 · ' + file + ' · ' + new Date().toLocaleString('zh-CN');
@@ -965,10 +979,107 @@
     var blob = new Blob([srcEls.ta.value], { type: 'text/html;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = file;
+    a.download = file.split('/').pop();
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
-    srcSay('已导出 ' + file + '，替换掉本地同名文件即可', 'ok');
+    srcSay('已导出 ' + file.split('/').pop() + '，替换掉本地同名文件即可', 'ok');
+  }
+
+  /* ---- 文件清单：仓库里所有代码文件都列出来（含 versions 备份） ---- */
+  var CODE_EXT = /\.(html|htm|js|css|json|py|md|sql|txt|webmanifest)$/i;
+  var ROOT_ORDER = ['index.html', 'game.html', 'S1.html', 'dev.html'];
+  var allFiles = null;
+
+  function grpOf(p) {
+    if (p.indexOf('versions/') === 0) return 'versions 备份';
+    if (p.indexOf('/') < 0) return '根目录';
+    return '其它';
+  }
+  function sortFiles(list) {
+    var g = {};
+    list.forEach(function (p) { var k = grpOf(p); (g[k] = g[k] || []).push(p); });
+    Object.keys(g).forEach(function (k) {
+      g[k].sort(function (a, b) {
+        var ia = ROOT_ORDER.indexOf(a), ib = ROOT_ORDER.indexOf(b);
+        if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        return b.localeCompare(a, 'zh');   /* versions 里新的排前面 */
+      });
+    });
+    return g;
+  }
+  function renderFileChoices(list) {
+    var g = sortFiles(list), order = ['根目录', 'versions 备份', '其它'], html = '';
+    order.forEach(function (k) {
+      if (!g[k] || !g[k].length) return;
+      html += '<optgroup label="' + k + '（' + g[k].length + ' 个）">' +
+        g[k].map(function (p) {
+          var lab = (k === 'versions 备份') ? p.replace(/^versions\//, '') : p;
+          return '<option value="' + esc(p) + '">' + esc(lab) + '</option>';
+        }).join('') + '</optgroup>';
+    });
+    srcEls.file.innerHTML = html || '<option value="S1.html">S1.html</option>';
+    if (list.indexOf('S1.html') >= 0) srcEls.file.value = 'S1.html';
+    /* 路由候选：只要 .html，排除 index.html 自己（会绕圈） */
+    srcEls.rfile.innerHTML = list.filter(function (p) {
+      return /\.html?$/i.test(p) && !/(^|\/)index\.html$/i.test(p);
+    }).map(function (p) { return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('')
+      || '<option value="game.html">game.html</option>';
+  }
+  function loadFileList(force) {
+    if (allFiles && !force) return Promise.resolve(allFiles);
+    return gh('/git/trees/' + GH_BRANCH + '?recursive=1').then(function (d) {
+      var out = [];
+      (d.tree || []).forEach(function (t) {
+        if (t.type !== 'blob') return;
+        if (t.path.charAt(0) === '.') return;
+        if (!CODE_EXT.test(t.path)) return;
+        out.push(t.path);
+      });
+      if (!out.length) throw new Error('空');
+      return out;
+    }).catch(function () {
+      /* 没填 Token：退回静态目录索引，照样能列出全部备份 */
+      var base = ['index.html', 'game.html', 'S1.html', 'dev.html'];
+      return fetch('/versions/?t=' + Date.now()).then(function (r) { return r.text(); }).then(function (h) {
+        var re = /href="([^"\/]+\.html?)"/gi, m;
+        while ((m = re.exec(h))) base.push('versions/' + m[1]);
+        return base;
+      }).catch(function () { return base; });
+    }).then(function (list) {
+      allFiles = list;
+      renderFileChoices(list);
+      return list;
+    });
+  }
+
+  /* ---- 正式网址打开哪个文件（存云端 __dev_route，立即生效） ---- */
+  function routeSay(txt, cls) { srcEls.rstat.textContent = txt; srcEls.rstat.className = 'rs ' + (cls || ''); }
+  function routeLoad() {
+    return api('/rest/v1/saves?user_id=eq.__dev_route&select=data').then(function (rows) {
+      var d = rows && rows[0] && rows[0].data;
+      if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
+      var t = (d && d.target) || 'game.html';
+      var hit = false;
+      Array.prototype.forEach.call(srcEls.rfile.options, function (o) { if (o.value === t) hit = true; });
+      if (hit) srcEls.rfile.value = t;
+      routeSay('当前：' + t, 'ok');
+      return t;
+    }).catch(function () { routeSay('读取失败，默认 game.html', 'err'); return 'game.html'; });
+  }
+  function routeApply(btn) {
+    var t = srcEls.rfile.value;
+    if (!t) { routeSay('先选一个文件', 'err'); return; }
+    if (!confirm('把正式网址 «/» 的入口改成：\n' + t + '\n\n确认后全服玩家下次打开首页就进这个文件。')) return;
+    btn.disabled = true;
+    api('/rest/v1/saves?on_conflict=user_id', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ user_id: '__dev_route', data: { target: t, ts: Date.now() }, updated_at: new Date().toISOString() })
+    }).then(function () {
+      btn.disabled = false;
+      routeSay('✔ 已切到 ' + t, 'ok');
+      toast('正式网址入口已改为 ' + t, 'ok');
+    }).catch(function (e) { btn.disabled = false; routeSay('失败：' + e.message, 'err'); });
   }
 
   /* ---- 口令门 & 开合 ---- */
@@ -979,7 +1090,8 @@
       setTimeout(function () { document.getElementById('srcpass').focus(); }, 60);
       return;
     }
-    srcLoad(srcEls.file.value, true);
+    loadFileList().then(function () { srcLoad(srcEls.file.value, true); });
+    routeLoad();
   }
   function srcGateTry() {
     var v = document.getElementById('srcpass').value || '';
@@ -989,7 +1101,8 @@
       m.textContent = '';
       document.getElementById('srcpass').value = '';
       srcEls.gate.classList.remove('on');
-      srcLoad(srcEls.file.value, true);
+      loadFileList().then(function () { srcLoad(srcEls.file.value, true); });
+      routeLoad();
     } else {
       m.textContent = '口令不对，源码编辑没开';
     }
@@ -1017,6 +1130,7 @@
   document.getElementById('srccheck').addEventListener('click', srcCheck);
   document.getElementById('srcfind').addEventListener('click', srcFind);
   document.getElementById('srcdl').addEventListener('click', srcDownload);
+  document.getElementById('routeapply').addEventListener('click', function () { routeApply(this); });
   document.getElementById('srcpush').addEventListener('click', function () { srcPush(this); });
   srcEls.file.addEventListener('change', function () {
     if (srcEls.ta.value !== srcBase && srcBase && !confirm('切换文件会丢掉当前未同步的改动，继续？')) {
