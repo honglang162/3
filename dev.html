@@ -12,25 +12,15 @@
   * { box-sizing:border-box; margin:0; padding:0; }
   body { background:var(--bg); color:var(--txt); font:14px/1.5 -apple-system,'PingFang SC','Microsoft YaHei',sans-serif; min-height:100vh; }
   button { font:inherit; cursor:pointer; }
-  /* 密码门 */
-  #gate { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg); z-index:99; }
-  #gate .box { width:min(340px,90vw); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:26px; }
-  #gate h1 { font-size:16px; margin-bottom:4px; }
-  #gate p { color:var(--sub); font-size:12px; margin-bottom:16px; }
-  #gate input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
-                background:#0d1420; color:var(--txt); outline:none; letter-spacing:2px; }
-  #gate input:focus { border-color:var(--cyan); }
-  #gate .go { width:100%; margin-top:12px; padding:10px; border:0; border-radius:8px;
-              background:var(--cyan); color:#04121c; font-weight:700; }
-  #gate .msg { min-height:18px; font-size:12px; margin-top:10px; color:var(--err); }
   /* 主界面 */
   #app { display:block; height:100vh; }
   header { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); }
   header h1 { font-size:15px; }
   header .stat { color:var(--sub); font-size:12px; }
-  header .refresh { margin-left:auto; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--txt); }
-  header a.refresh { text-decoration:none; display:inline-block; }
+  header .refresh { padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--txt); }
+  header a.refresh { text-decoration:none; display:inline-block; margin-left:auto; }
   header .refresh.mla { margin-left:0; }
+  header .refresh.acc { border-color:#2b4a63; color:var(--cyan); }
   #wrap { display:flex; height:calc(100vh - 53px); }
   /* 左列 */
   #list-col { width:300px; min-width:220px; border-right:1px solid var(--line); display:flex; flex-direction:column; }
@@ -83,10 +73,55 @@
   .add-row select { max-width:340px; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#0d1420; color:var(--txt); outline:none; }
   .add-row input { width:64px; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:#0d1420; color:var(--txt); outline:none; }
   #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#182238; border:1px solid var(--line);
-           color:var(--txt); padding:9px 18px; border-radius:10px; font-size:13px; display:none; z-index:90; max-width:80vw; }
+           color:var(--txt); padding:9px 18px; border-radius:10px; font-size:13px; display:none; z-index:200; max-width:80vw; }
   #toast.ok { border-color:var(--ok); color:var(--ok); }
   #toast.err { border-color:var(--err); color:var(--err); }
   .lbl-sub { color:var(--sub); font-size:12px; margin:10px 0 6px; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:20px; font-size:11px; border:1px solid var(--line); color:var(--sub); }
+  .pill.on { border-color:#2c6e45; color:#4ade80; }
+  .pill.off { border-color:#3a4554; color:#7c8aa0; }
+  .pill.key { border-color:#8a6a1d; color:#fbbf24; }
+  .bd-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border:1px solid var(--line);
+            border-radius:10px; background:#0d1420; margin-bottom:8px; flex-wrap:wrap; }
+  .bd-row .t { flex:1; min-width:150px; font-size:13px; }
+  .bd-row .t small { display:block; color:var(--sub); font-size:11.5px; font-weight:400; margin-top:2px; }
+  /* ---------- 源码编辑器 ---------- */
+  .srcmask { position:fixed; inset:0; background:rgba(4,8,14,.94); z-index:150; display:none; }
+  .srcmask.on { display:flex; }
+  .srcwin { flex:1; display:flex; flex-direction:column; margin:10px; background:var(--panel);
+            border:1px solid var(--line); border-radius:12px; overflow:hidden; min-height:0; }
+  .srcbar { display:flex; gap:8px; align-items:center; padding:8px 10px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .srcbar b.t { font-size:13px; letter-spacing:.06em; color:var(--cyan); }
+  .srcbar select, .srcbar input { padding:6px 8px; border-radius:7px; border:1px solid var(--line);
+            background:#0d1420; color:var(--txt); outline:none; font-size:12px; }
+  .srcbar button { padding:6px 11px; border-radius:7px; border:1px solid var(--line); background:#182238;
+            color:var(--txt); font-size:12px; }
+  .srcbar button:hover { border-color:var(--cyan); }
+  .srcbar button.pri { background:var(--cyan); border-color:var(--cyan); color:#04121c; font-weight:700; }
+  .srcbar .sp { flex:1; }
+  .srcbody { flex:1; display:flex; min-height:0; background:#070c14; }
+  #srcgutter { padding:8px 8px 8px 10px; text-align:right; color:#3f5570; background:#0a111f;
+               font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+               overflow:hidden; user-select:none; border-right:1px solid var(--line); margin:0; }
+  #srcta { flex:1; margin:0; padding:8px; border:0; outline:none; resize:none; background:transparent;
+           color:#cfe0f2; font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+           white-space:pre; overflow:auto; tab-size:2; }
+  .srcfoot { display:flex; gap:14px; align-items:center; padding:6px 10px; border-top:1px solid var(--line);
+             font-size:12px; color:var(--sub); flex-wrap:wrap; }
+  #srcmsg.ok { color:var(--ok); } #srcmsg.err { color:var(--err); } #srcmsg { color:var(--sub); }
+  /* 口令门 */
+  .gatebox { margin:auto; width:min(360px,92vw); background:var(--panel); border:1px solid var(--line);
+             border-radius:14px; padding:24px; }
+  .gatebox h2 { font-size:15px; margin-bottom:4px; }
+  .gatebox p { color:var(--sub); font-size:12px; margin-bottom:14px; line-height:1.6; }
+  .gatebox input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
+                   background:#0d1420; color:var(--txt); outline:none; letter-spacing:3px; }
+  .gatebox input:focus { border-color:var(--cyan); }
+  .gatebox .row { display:flex; gap:8px; margin-top:12px; }
+  .gatebox .row button { flex:1; padding:10px; border-radius:8px; border:1px solid var(--line);
+                   background:#182238; color:var(--txt); }
+  .gatebox .row button.pri { background:var(--cyan); border-color:var(--cyan); color:#04121c; font-weight:700; }
+  .gatebox .msg { min-height:18px; font-size:12px; margin-top:10px; color:var(--err); }
   @media (max-width:760px) {
     #wrap { flex-direction:column; }
     #list-col { width:100%; max-height:42vh; border-right:0; border-bottom:1px solid var(--line); }
@@ -100,6 +135,7 @@
     <h1>开发者控制台</h1>
     <span class="stat" id="hdr-stat">加载中…</span>
     <a class="refresh" href="/game.html" target="_blank">返回游戏</a>
+    <button class="refresh mla acc" id="btn-src" type="button">⌨ 源码</button>
     <button class="refresh mla" id="btn-refresh" type="button">↻ 刷新</button>
   </header>
   <div id="wrap">
@@ -108,6 +144,52 @@
       <div id="plist"><div class="empty">加载中…</div></div>
     </div>
     <div id="detail"><div class="empty">← 左侧选择一名玩家</div></div>
+  </div>
+</div>
+
+<!-- 源码编辑器 -->
+<div class="srcmask" id="srcmask">
+  <div class="srcwin">
+    <div class="srcbar">
+      <b class="t">源码编辑</b>
+      <select id="srcfile">
+        <option value="S1.html">S1.html · 测试服</option>
+        <option value="game.html">game.html · 正式服</option>
+        <option value="index.html">index.html · 正式服首页</option>
+      </select>
+      <button id="srcpull" type="button">↻ 拉取线上</button>
+      <button id="srccheck" type="button">✓ 语法检查</button>
+      <button id="srcfind" type="button">🔍 查找替换</button>
+      <button id="srcdl" type="button">⬇ 导出文件</button>
+      <span class="sp"></span>
+      <input id="srctok" type="password" placeholder="GitHub Token（存本机）" style="width:190px" autocomplete="off">
+      <button id="srcpush" class="pri" type="button">⤴ 同步到线上</button>
+      <button id="srcclose" type="button">✕</button>
+    </div>
+    <div class="srcbody">
+      <pre id="srcgutter"></pre>
+      <textarea id="srcta" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off"></textarea>
+    </div>
+    <div class="srcfoot">
+      <span id="srcstat">未加载</span>
+      <span id="srcmsg"></span>
+      <span class="sp" style="flex:1"></span>
+      <span style="color:#54697f">同步走 GitHub → Pages 自动重建，正式服约 30~90 秒生效</span>
+    </div>
+  </div>
+</div>
+
+<!-- 源码口令门 -->
+<div class="srcmask" id="srcgate">
+  <div class="gatebox">
+    <h2>主策划验证</h2>
+    <p>源码编辑仅限主策划。输入进入口令后即可查看并修改全部源码。</p>
+    <input id="srcpass" type="password" placeholder="进入口令" autocomplete="off">
+    <div class="row">
+      <button id="srcgate-cancel" type="button">取消</button>
+      <button id="srcgate-ok" class="pri" type="button">验证并进入</button>
+    </div>
+    <div class="msg" id="srcgate-msg"></div>
   </div>
 </div>
 
@@ -181,6 +263,7 @@
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function gnum(n) { return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  var enc = encodeURIComponent;
 
   /* ---------- 物品定义：运行时从 game.html 提取，永远跟游戏同步 ---------- */
   var DEFS = [];
@@ -188,7 +271,6 @@
     return fetch('/game.html?t=' + Date.now()).then(function (r) { return r.text(); }).then(function (html) {
       var m = html.match(/var ITEM_DEFS = \[[\s\S]*?\n\];/);
       if (!m) throw new Error('defs not found');
-      var defs = null;
       (0, eval)(m[0] + '; window.__DEV_ITEM_DEFS = ITEM_DEFS;');
       DEFS = window.__DEV_ITEM_DEFS || [];
       if (!DEFS.length) throw new Error('defs empty');
@@ -217,9 +299,12 @@
       api('/rest/v1/leaderboard?select=user_id,nick,total,money,kills,extracts').catch(function () { return []; })
     ]).then(function (r) {
       var users = r[0] || [], saves = r[1] || [], nicks = r[2] || [], lb = r[3] || [];
-      var map = {};
+      var map = {}, nickRows = {};
       users.forEach(function (u) { map[u.uid] = { uid: u.uid, nick: u.nick, hasAcct: true, acct: u, save: null, lb: null }; });
-      nicks.forEach(function (n) { if (!map[n.uid]) map[n.uid] = { uid: n.uid, nick: n.nick, hasAcct: false, save: null, lb: null }; });
+      nicks.forEach(function (n) {
+        nickRows[n.uid] = n.nick;
+        if (!map[n.uid]) map[n.uid] = { uid: n.uid, nick: n.nick, hasAcct: false, save: null, lb: null };
+      });
       saves.forEach(function (s) {
         if (!map[s.user_id]) map[s.user_id] = { uid: s.user_id, nick: null, hasAcct: false, save: null, lb: null };
         map[s.user_id].save = s;
@@ -229,11 +314,17 @@
         var p = map[k];
         if (!p.nick && p.save && p.save.data && p.save.data.nick) p.nick = p.save.data.nick;
         if (!p.nick) p.nick = '未知玩家';
+        p.hasNickRow = !!nickRows[p.uid];
         p.stash = (p.save && p.save.data && p.save.data.stash) || [];
         p.money = (p.save && p.save.data && typeof p.save.data.money === 'number') ? p.save.data.money : null;
+        if (sel) {
+          /* 刷新后保持选中项数据最新 */
+          if (sel.uid === p.uid) { p._fr = sel._fr; p._frState = sel._frState; sel = p; }
+        }
         return p;
       }).sort(function (a, b) { return a.nick.localeCompare(b.nick, 'zh'); });
       renderList();
+      if (sel) renderDetail();
       setStatus(players.length + ' 名玩家');
     }).catch(function (e) { setStatus('加载失败：' + e.message); toast('加载失败：' + e.message, 'err'); });
   }
@@ -247,7 +338,7 @@
     box.innerHTML = rows.map(function (p) {
       return '<div class="prow' + (sel && sel.uid === p.uid ? ' sel' : '') + '" data-uid="' + esc(p.uid) + '">' +
         '<div class="pn">' + esc(p.nick) + (p.hasAcct ? '' : ' <span style="color:var(--sub);font-size:11px">(无账号)</span>') + '</div>' +
-        '<div class="pm">仓库 ' + p.stash.length + ' 件 · ' + (p.money == null ? '无存档' : '$' + gnum(p.money)) + '</div>' +
+        '<div class="pm">仓库 ' + p.stash.length + ' 件 · ' + (p.money == null ? '无存档' : '$' + gnum(p.money)) + (p.lb ? ' · 榜' : '') + '</div>' +
       '</div>';
     }).join('');
     Array.prototype.forEach.call(box.querySelectorAll('.prow'), function (el) {
@@ -261,7 +352,6 @@
 
   function stashItemRow(it, idx) {
     if (!it) return '';
-    var d = defByName(it.n);
     return '<div class="item">' +
       '<span class="nm r-' + esc(it.r) + '">' + esc(it.n) + ' <span style="color:var(--sub)">×' + (it.cnt || 1) + '</span></span>' +
       '<span class="vl">$' + gnum(it.v) + '</span>' +
@@ -285,6 +375,65 @@
     return out;
   }
 
+  /* ---------- 名单管理：玩家都躺在哪些表里 ---------- */
+  function ensureFriends(p) {
+    if (p._frState) return;
+    p._frState = 'loading';
+    api('/rest/v1/friends?or=(owner.eq.' + enc(p.uid) + ',friend.eq.' + enc(p.uid) + ')&select=owner,friend')
+      .then(function (list) { p._fr = list || []; p._frState = 'done'; if (sel && sel.uid === p.uid) renderDetail(); })
+      .catch(function () { p._fr = []; p._frState = 'done'; if (sel && sel.uid === p.uid) renderDetail(); });
+  }
+  function nickOf(uid) {
+    if (sel && uid === sel.uid) return sel.nick;
+    for (var i = 0; i < players.length; i++) if (players[i].uid === uid) return players[i].nick;
+    return uid.length > 12 ? uid.slice(0, 10) + '…' : uid;
+  }
+  function listCard(p) {
+    var lb = p.lb || null;
+    var fr = p._fr;
+    var frRows;
+    if (p._frState === 'loading' || !p._frState) {
+      frRows = '<div class="lbl-sub">好友关系读取中…</div>';
+    } else if (!fr || !fr.length) {
+      frRows = '<div class="lbl-sub">没有任何好友关系记录</div>';
+    } else {
+      frRows = fr.map(function (f) {
+        var mine = (f.owner === p.uid);
+        var other = mine ? f.friend : f.owner;
+        return '<div class="item">' +
+          '<span class="nm">' + esc(nickOf(other)) + '</span>' +
+          '<span class="vl">' + (mine ? '他 → 我（我加的他）' : '我 → 他（他加的我）') + '</span>' +
+          '<button data-act="frdel" data-owner="' + esc(f.owner) + '" data-friend="' + esc(f.friend) + '" type="button">解除</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    return '<div class="card">' +
+      '<h2>名单管理 · 玩家所在的数据表</h2>' +
+      '<div class="bd-row">' +
+        '<span class="t">排行榜 <small>leaderboard · 排名与战绩</small></span>' +
+        (lb ? '<span class="pill key">在榜 · ' + (lb.total || 0) + ' 场 / ' + (lb.kills || 0) + ' 杀</span>' +
+              '<button class="btn warn" data-act="lbdrop" type="button">移出排行榜</button>'
+            : '<span class="pill off">不在排行榜</span>') +
+      '</div>' +
+      '<div class="bd-row">' +
+        '<span class="t">昵称表 <small>user_nicks · 加好友搜索用的候选池</small></span>' +
+        (p.hasNickRow ? '<span class="pill on">有记录</span><button class="btn warn" data-act="nickdrop" type="button">移除记录</button>'
+                      : '<span class="pill off">无记录</span>') +
+      '</div>' +
+      '<div class="bd-row">' +
+        '<span class="t">好友列表 <small>friends · 双向好友关系</small></span>' +
+        '<span class="pill ' + (fr && fr.length ? 'on' : 'off') + '">' + (fr ? fr.length : 0) + ' 条关系</span>' +
+        (fr && fr.length ? '<button class="btn danger" data-act="frclear" type="button">全部解除</button>' : '') +
+      '</div>' +
+      '<div class="lbl-sub">好友明细</div>' + frRows +
+      '<div class="bd-row" style="margin-top:10px">' +
+        '<span class="t">私聊记录 <small>messages · 该玩家收发的全部消息</small></span>' +
+        '<button class="btn warn" data-act="msgclear" type="button">清空私聊</button>' +
+      '</div>' +
+    '</div>';
+  }
+
   function renderDetail() {
     var box = document.getElementById('detail');
     if (!sel) { box.innerHTML = '<div class="empty">← 左侧选择一名玩家</div>'; return; }
@@ -293,6 +442,7 @@
     var st = sv && sv.stats ? sv.stats : {};
     var lb = p.lb || {};
     var merged = mergeStash(p.stash || []);
+    ensureFriends(p);
     /* W16.85：仓库改成游戏风格的物品格子，点选一个物品在下方操作 */
     var itemsHtml = merged.length
       ? '<div class="stash-grid">' + merged.map(function (it) {
@@ -329,6 +479,7 @@
           '<span>存档更新</span><b>' + (p.save && p.save.updated_at ? String(p.save.updated_at).replace('T', ' ').slice(0, 16) : '—') + '</b>' +
         '</div>' +
       '</div>' +
+      listCard(p) +
       '<div class="card">' +
         '<h2>账号与密码</h2>' +
         (p.hasAcct
@@ -479,7 +630,7 @@
       el.disabled = true;
       var salt = ubSalt();
       ubHash(np, salt).then(function (h) {
-        return api('/rest/v1/users?uid=eq.' + p.uid, { method: 'PATCH', body: JSON.stringify({ salt: salt, hash: h }) });
+        return api('/rest/v1/users?uid=eq.' + enc(p.uid), { method: 'PATCH', body: JSON.stringify({ salt: salt, hash: h }) });
       }).then(function () {
         el.disabled = false;
         toast('「' + p.nick + '」的密码已重置，新密码：' + np, 'ok');
@@ -493,8 +644,8 @@
       if (nn === p.nick) { toast('昵称没有变化', 'err'); return; }
       el.disabled = true;
       Promise.all([
-        api('/rest/v1/users?uid=eq.' + p.uid, { method: 'PATCH', body: JSON.stringify({ nick: nn }) }),
-        api('/rest/v1/user_nicks?uid=eq.' + p.uid, { method: 'PATCH', body: JSON.stringify({ nick: nn }) }).catch(function () {})
+        api('/rest/v1/users?uid=eq.' + enc(p.uid), { method: 'PATCH', body: JSON.stringify({ nick: nn }) }),
+        api('/rest/v1/user_nicks?uid=eq.' + enc(p.uid), { method: 'PATCH', body: JSON.stringify({ nick: nn }) }).catch(function () {})
       ]).then(function () {
         el.disabled = false;
         var old = p.nick;
@@ -505,20 +656,67 @@
         renderList(); renderDetail();
       }).catch(function (e) { el.disabled = false; toast('改名失败：' + e.message, 'err'); });
 
+    /* ------- 名单管理 ------- */
+    } else if (act === 'lbdrop') {
+      if (!p.lb) { toast('该玩家不在排行榜', 'err'); return; }
+      if (!confirm('把「' + p.nick + '」从排行榜移出？\n战绩数据会一起清掉，账号和存档不受影响。')) return;
+      el.disabled = true;
+      api('/rest/v1/leaderboard?user_id=eq.' + enc(p.uid), { method: 'DELETE' }).then(function () {
+        el.disabled = false; p.lb = null; toast('已从排行榜移出', 'ok'); renderList(); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('操作失败：' + e.message, 'err'); });
+
+    } else if (act === 'nickdrop') {
+      if (!p.hasNickRow) { toast('该玩家不在昵称表', 'err'); return; }
+      if (!confirm('从昵称表移除「' + p.nick + '」？\n移除后别人搜不到他、也加不了好友，重新登录后可能自动补回。')) return;
+      el.disabled = true;
+      api('/rest/v1/user_nicks?uid=eq.' + enc(p.uid), { method: 'DELETE' }).then(function () {
+        el.disabled = false; p.hasNickRow = false; toast('已从昵称表移除', 'ok'); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('操作失败：' + e.message, 'err'); });
+
+    } else if (act === 'frdel') {
+      var ow = el.getAttribute('data-owner'), fd = el.getAttribute('data-friend');
+      if (!confirm('解除这条好友关系？')) return;
+      el.disabled = true;
+      api('/rest/v1/friends?owner=eq.' + enc(ow) + '&friend=eq.' + enc(fd), { method: 'DELETE' }).then(function () {
+        el.disabled = false;
+        p._fr = (p._fr || []).filter(function (f) { return !(f.owner === ow && f.friend === fd); });
+        toast('已解除', 'ok'); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('操作失败：' + e.message, 'err'); });
+
+    } else if (act === 'frclear') {
+      if (!confirm('解除「' + p.nick + '」的全部好友关系？\n双向都会删，对方列表里也会消失。')) return;
+      el.disabled = true;
+      Promise.all([
+        api('/rest/v1/friends?owner=eq.' + enc(p.uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/friends?friend=eq.' + enc(p.uid), { method: 'DELETE' }).catch(function () {})
+      ]).then(function () {
+        el.disabled = false; p._fr = []; p._frState = 'done'; toast('好友关系已全部解除', 'ok'); renderDetail();
+      }).catch(function (e) { el.disabled = false; toast('操作失败：' + e.message, 'err'); });
+
+    } else if (act === 'msgclear') {
+      if (!confirm('清空「' + p.nick + '」收发的全部私聊记录？不可恢复。')) return;
+      el.disabled = true;
+      Promise.all([
+        api('/rest/v1/messages?sender=eq.' + enc(p.uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/messages?receiver=eq.' + enc(p.uid), { method: 'DELETE' }).catch(function () {})
+      ]).then(function () {
+        el.disabled = false; toast('私聊记录已清空', 'ok');
+      }).catch(function (e) { el.disabled = false; toast('操作失败：' + e.message, 'err'); });
+
     } else if (act === 'delplayer') {
       /* W16.86：不再要求输入昵称，直接弹确认框 */
       if (!confirm('确定删除「' + p.nick + '」？\n将同时清除账号、云存档、排行榜、好友、私聊，不可恢复！')) return;
       el.disabled = true;
       var uid = p.uid;
       Promise.all([
-        api('/rest/v1/users?uid=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
-        api('/rest/v1/saves?user_id=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
-        api('/rest/v1/user_nicks?uid=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
-        api('/rest/v1/leaderboard?user_id=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
-        api('/rest/v1/friends?owner=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
-        api('/rest/v1/friends?friend=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
-        api('/rest/v1/messages?sender=eq.' + uid, { method: 'DELETE' }).catch(function () {}),
-        api('/rest/v1/messages?receiver=eq.' + uid, { method: 'DELETE' }).catch(function () {})
+        api('/rest/v1/users?uid=eq.' + enc(uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/saves?user_id=eq.' + enc(uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/user_nicks?uid=eq.' + enc(uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/leaderboard?user_id=eq.' + enc(uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/friends?owner=eq.' + enc(uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/friends?friend=eq.' + enc(uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/messages?sender=eq.' + enc(uid), { method: 'DELETE' }).catch(function () {}),
+        api('/rest/v1/messages?receiver=eq.' + enc(uid), { method: 'DELETE' }).catch(function () {})
       ]).then(function () {
         toast('玩家「' + p.nick + '」已删除', 'ok');
         sel = null;
@@ -529,6 +727,324 @@
 
   document.getElementById('btn-refresh').addEventListener('click', fetchAll);
   document.getElementById('search').addEventListener('input', function () { filter = this.value; renderList(); });
+
+  /* ==================================================================
+     源码编辑器（主策划专用）
+     - 口令进：区分不了身份，就用口令，口令写在下面的 SRC_PASS
+     - 改完「同步到线上」：直接走 GitHub Git Data API 提交一个 commit，
+       Pages 自动重建，不需要本地发布；game.html 会连带 index.html 一起提交，
+       保证两个文件永远同一版本
+     ================================================================== */
+  var SRC_PASS = 'honglang2026';                 /* ← 主策划进入口令，想换就改这里 */
+  var GH_REPO = 'honglang162/3';
+  var GH_BRANCH = 'master';
+  var SRC_FILES = ['S1.html', 'game.html', 'index.html'];
+  var TOK_LS = 'dev_gh_tok';
+
+  var srcEls = {
+    mask: document.getElementById('srcmask'),
+    gate: document.getElementById('srcgate'),
+    ta: document.getElementById('srcta'),
+    gut: document.getElementById('srcgutter'),
+    file: document.getElementById('srcfile'),
+    tok: document.getElementById('srctok'),
+    stat: document.getElementById('srcstat'),
+    msg: document.getElementById('srcmsg')
+  };
+  var srcBase = '';          /* 拉取时的原文，用于判断是否有改动 / 还原 */
+  var srcSha = '';           /* 当前文件远端 commit sha（仅用于显示） */
+  var srcLoaded = '';        /* 已加载的文件名 */
+
+  function srcSay(txt, cls) {
+    srcEls.msg.textContent = txt || '';
+    srcEls.msg.className = cls || '';
+  }
+  function lineCount(s) {
+    var n = 1;
+    for (var i = 0; i < s.length; i++) if (s.charCodeAt(i) === 10) n++;
+    return n;
+  }
+  function srcRefreshGutter() {
+    var n = lineCount(srcEls.ta.value);
+    var out = new Array(n);
+    for (var i = 0; i < n; i++) out[i] = i + 1;
+    srcEls.gut.textContent = out.join('\n');
+    srcEls.gut.scrollTop = srcEls.ta.scrollTop;
+    var changed = srcEls.ta.value !== srcBase;
+    srcEls.stat.textContent = n + ' 行 · ' + srcEls.ta.value.length + ' 字符' + (changed ? ' · 有未同步改动' : ' · 与线上一致');
+    srcEls.stat.style.color = changed ? 'var(--warn)' : 'var(--sub)';
+  }
+  function srcScrollSync() { srcEls.gut.scrollTop = srcEls.ta.scrollTop; }
+
+  /* ---- base64（UTF-8 安全，FileReader 不用，直接手撸） ---- */
+  function b64enc(str) {
+    var u = new TextEncoder().encode(str), s = '', CH = 0x8000;
+    for (var i = 0; i < u.length; i += CH) s += String.fromCharCode.apply(null, u.subarray(i, i + CH));
+    return btoa(s);
+  }
+  function b64dec(b64) {
+    var bin = atob(String(b64).replace(/\s/g, '')), u = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(u);
+  }
+
+  /* ---- GitHub API ---- */
+  function tok() { return (srcEls.tok.value || '').trim() || localStorage.getItem(TOK_LS) || ''; }
+  function gh(path, opt) {
+    var t = tok();
+    if (!t) return Promise.reject(new Error('先填 GitHub Token'));
+    opt = opt || {};
+    var h = { 'Authorization': 'Bearer ' + t, 'Accept': 'application/vnd.github+json' };
+    if (opt.body) h['Content-Type'] = 'application/json';
+    return fetch('https://api.github.com/repos/' + GH_REPO + path, {
+      method: opt.method || 'GET', headers: h, cache: 'no-store',
+      body: opt.body ? JSON.stringify(opt.body) : undefined
+    }).then(function (r) {
+      return r.text().then(function (txt) {
+        var d = null; try { d = txt ? JSON.parse(txt) : null; } catch (e) { d = txt; }
+        if (!r.ok) {
+          var m = (d && d.message) || ('HTTP ' + r.status);
+          if (r.status === 401) m = 'Token 无效或已过期';
+          if (r.status === 403) m = 'Token 没有写权限（需要 Contents: Read and write）';
+          if (r.status === 404) m = 'Token 没有这个仓库的权限';
+          if (r.status === 409) m = '远端刚有新提交，重试一次';
+          throw new Error(m);
+        }
+        return d;
+      });
+    });
+  }
+  /* 读：优先 GitHub（权威），失败退回同源文件 */
+  function srcPull(file) {
+    srcSay('拉取中…');
+    return gh('/contents/' + file + '?ref=' + GH_BRANCH).then(function (d) {
+      if (!d || !d.content) throw new Error('内容为空');
+      return b64dec(d.content);
+    }).catch(function (e) {
+      if (!tok()) {
+        return fetch('/' + file + '?t=' + Date.now()).then(function (r) {
+          if (!r.ok) throw new Error('拉取失败 HTTP ' + r.status);
+          return r.text();
+        });
+      }
+      throw e;
+    });
+  }
+  function srcLoad(file, force) {
+    if (!force && file === srcLoaded) return;
+    srcEls.ta.value = '加载中…';
+    srcEls.ta.disabled = true;
+    srcPull(file).then(function (txt) {
+      srcEls.ta.disabled = false;
+      srcEls.ta.value = txt;
+      srcBase = txt; srcLoaded = file;
+      srcRefreshGutter();
+      var kb = Math.round(txt.length / 1024);
+      srcSay('已加载 ' + file + ' · ' + kb + ' KB', 'ok');
+    }).catch(function (e) {
+      srcEls.ta.disabled = false;
+      srcEls.ta.value = '';
+      srcBase = '';
+      srcRefreshGutter();
+      srcSay('拉取失败：' + e.message + '（可先填 Token，或改用「导出」后的本地文件编辑）', 'err');
+    });
+  }
+
+  /* 写：一次 commit 提交多个文件 */
+  function ghCommit(files, message) {
+    var base = null;
+    return gh('/git/ref/heads/' + GH_BRANCH).then(function (ref) {
+      return gh('/git/commits/' + ref.object.sha).then(function (c) {
+        base = { commit: ref.object.sha, tree: c.tree.sha };
+      });
+    }).then(function () {
+      return Promise.all(files.map(function (f) {
+        return gh('/git/blobs', { method: 'POST', body: { content: b64enc(f.text), encoding: 'base64' } })
+          .then(function (b) { return { path: f.path, mode: '100644', type: 'blob', sha: b.sha }; });
+      }));
+    }).then(function (entries) {
+      return gh('/git/trees', { method: 'POST', body: { base_tree: base.tree, tree: entries } });
+    }).then(function (tree) {
+      return gh('/git/commits', { method: 'POST', body: { message: message, tree: tree.sha, parents: [base.commit] } });
+    }).then(function (nc) {
+      return gh('/git/refs/heads/' + GH_BRANCH, { method: 'PATCH', body: { sha: nc.sha, force: false } })
+        .catch(function () {
+          return gh('/git/refs/heads/' + GH_BRANCH, { method: 'PATCH', body: { sha: nc.sha, force: true } });
+        }).then(function () { return nc; });
+    });
+  }
+
+  function srcPush(btn) {
+    var file = srcEls.file.value;
+    var text = srcEls.ta.value;
+    if (!text || text === '加载中…') { srcSay('没有内容可同步', 'err'); return; }
+    if (text === srcBase) { srcSay('和线上完全一致，无需同步', ''); return; }
+    var files = [{ path: file, text: text }];
+    if (file === 'game.html') files.push({ path: 'index.html', text: text });
+    var extra = files.length > 1 ? '（含 index.html）' : '';
+    if (!confirm('同步 ' + file + extra + ' 到线上？\n将提交到 GitHub，Pages 自动重建，约 30~90 秒生效。')) return;
+    btn.disabled = true;
+    srcSay('提交中…');
+    var msg = 'dev.html 在线源码同步 · ' + file + ' · ' + new Date().toLocaleString('zh-CN');
+    ghCommit(files, msg).then(function (nc) {
+      btn.disabled = false;
+      srcBase = text;
+      srcRefreshGutter();
+      srcSay('✔ 已提交 ' + nc.sha.slice(0, 7) + ' · Pages 构建中，稍等 30~90 秒刷新游戏即可', 'ok');
+      toast('已同步到线上', 'ok');
+    }).catch(function (e) {
+      /* 409 / 分支刚动过 → 自动重试一次 */
+      if (/重试一次|409/.test(e.message)) {
+        return ghCommit(files, msg).then(function (nc) {
+          btn.disabled = false; srcBase = text; srcRefreshGutter();
+          srcSay('✔ 已提交 ' + nc.sha.slice(0, 7) + '（重试成功）', 'ok');
+        });
+      }
+      btn.disabled = false;
+      srcSay('同步失败：' + e.message, 'err');
+    });
+  }
+
+  /* 语法检查：抽出内联 script 逐块 new Function 编译，报出第一处错误 */
+  function srcCheck() {
+    var text = srcEls.ta.value;
+    var re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, m, bad = 0, total = 0, firstErr = '';
+    var lineAt = (function () {
+      var idx = 0, line = 0, cache = {};
+      return function (pos) { return text.slice(0, pos).split('\n').length; };
+    })();
+    while ((m = re.exec(text))) {
+      if (/\bsrc\s*=/.test(m[1])) continue;
+      if (!m[2] || !m[2].trim()) continue;
+      total++;
+      try { new Function(m[2]); }
+      catch (e) {
+        bad++;
+        if (!firstErr) firstErr = '第 ' + lineAt(m.index) + ' 行起的脚本块：' + e.message;
+      }
+    }
+    var cssOpen = (text.match(/<style\b/gi) || []).length, cssClose = (text.match(/<\/style>/gi) || []).length;
+    var divOpen = (text.match(/<div\b/gi) || []).length, divClose = (text.match(/<\/div>/gi) || []).length;
+    var warn = [];
+    if (cssOpen !== cssClose) warn.push('style 标签 ' + cssOpen + ' 开 / ' + cssClose + ' 闭');
+    if (divOpen !== divClose) warn.push('div 标签 ' + divOpen + ' 开 / ' + divClose + ' 闭');
+    if (bad) {
+      srcSay('✘ ' + bad + '/' + total + ' 个脚本块有语法错误 —— ' + firstErr, 'err');
+    } else {
+      srcSay('✓ ' + total + ' 个脚本块全部通过' + (warn.length ? ' · 注意 ' + warn.join('，') : ''), warn.length ? '' : 'ok');
+    }
+  }
+
+  function srcFind() {
+    var ta = srcEls.ta;
+    var q = prompt('查找内容：');
+    if (q == null || q === '') return;
+    var from = ta.selectionEnd || 0;
+    var i = ta.value.indexOf(q, from);
+    if (i < 0) i = ta.value.indexOf(q);
+    if (i < 0) { srcSay('没找到：' + q, 'err'); return; }
+    ta.focus();
+    ta.setSelectionRange(i, i + q.length);
+    var ln = ta.value.slice(0, i).split('\n').length;
+    var lh = 12 * 1.55;
+    ta.scrollTop = Math.max(0, (ln - 6) * lh);
+    srcScrollSync();
+    srcSay('找到：第 ' + ln + ' 行', 'ok');
+    var r = prompt('替换为（留空则只查找，点取消不替换）：', '');
+    if (r) {
+      if (!confirm('把全文所有「' + q + '」替换为「' + r + '」？')) return;
+      var cnt = ta.value.split(q).length - 1;
+      ta.value = ta.value.split(q).join(r);
+      srcRefreshGutter();
+      srcSay('已替换 ' + cnt + ' 处', 'ok');
+    }
+  }
+
+  function srcDownload() {
+    var file = srcEls.file.value;
+    var blob = new Blob([srcEls.ta.value], { type: 'text/html;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = file;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    srcSay('已导出 ' + file + '，替换掉本地同名文件即可', 'ok');
+  }
+
+  /* ---- 口令门 & 开合 ---- */
+  function srcOpen() {
+    srcEls.mask.classList.add('on');
+    if (sessionStorage.getItem('dev_src_ok') !== '1') {
+      srcEls.gate.classList.add('on');
+      setTimeout(function () { document.getElementById('srcpass').focus(); }, 60);
+      return;
+    }
+    srcLoad(srcEls.file.value, true);
+  }
+  function srcGateTry() {
+    var v = document.getElementById('srcpass').value || '';
+    var m = document.getElementById('srcgate-msg');
+    if (v === SRC_PASS) {
+      sessionStorage.setItem('dev_src_ok', '1');
+      m.textContent = '';
+      document.getElementById('srcpass').value = '';
+      srcEls.gate.classList.remove('on');
+      srcLoad(srcEls.file.value, true);
+    } else {
+      m.textContent = '口令不对，源码编辑没开';
+    }
+  }
+  function srcClose() {
+    if (srcEls.ta.value !== srcBase && srcBase) {
+      if (!confirm('有未同步的改动，确定关闭？（改动会丢失）')) return;
+    }
+    srcEls.mask.classList.remove('on');
+    srcEls.gate.classList.remove('on');
+  }
+
+  document.getElementById('btn-src').addEventListener('click', srcOpen);
+  document.getElementById('srcclose').addEventListener('click', srcClose);
+  document.getElementById('srcgate-cancel').addEventListener('click', function () {
+    srcEls.gate.classList.remove('on');
+    srcEls.mask.classList.remove('on');
+  });
+  document.getElementById('srcgate-ok').addEventListener('click', srcGateTry);
+  document.getElementById('srcpass').addEventListener('keydown', function (e) { if (e.key === 'Enter') srcGateTry(); });
+  document.getElementById('srcpull').addEventListener('click', function () {
+    srcLoaded = '';
+    srcLoad(srcEls.file.value, true);
+  });
+  document.getElementById('srccheck').addEventListener('click', srcCheck);
+  document.getElementById('srcfind').addEventListener('click', srcFind);
+  document.getElementById('srcdl').addEventListener('click', srcDownload);
+  document.getElementById('srcpush').addEventListener('click', function () { srcPush(this); });
+  srcEls.file.addEventListener('change', function () {
+    if (srcEls.ta.value !== srcBase && srcBase && !confirm('切换文件会丢掉当前未同步的改动，继续？')) {
+      srcEls.file.value = srcLoaded || 'S1.html';
+      return;
+    }
+    srcLoad(srcEls.file.value, true);
+  });
+  srcEls.ta.addEventListener('input', srcRefreshGutter);
+  srcEls.ta.addEventListener('scroll', srcScrollSync);
+  srcEls.ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      var s = this.selectionStart, en = this.selectionEnd;
+      this.value = this.value.slice(0, s) + '  ' + this.value.slice(en);
+      this.selectionStart = this.selectionEnd = s + 2;
+      srcRefreshGutter();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      document.getElementById('srcpush').click();
+    }
+  });
+  /* Token 只存本机浏览器，不写进页面（页面是公开的） */
+  try { var _t = localStorage.getItem(TOK_LS); if (_t) srcEls.tok.value = _t; } catch (e) {}
+  srcEls.tok.addEventListener('change', function () {
+    try { localStorage.setItem(TOK_LS, this.value.trim()); } catch (e) {}
+  });
 
   /* W16.86：去掉密码门 —— 控制台页面直接进入，口令只在游戏设置视野页入口那里验证 */
   function boot() { loadDefs().then(fetchAll); }
