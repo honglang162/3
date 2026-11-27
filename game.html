@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W16.98 2026-11-26 13:15';
+  var BUILD = 'W16.99 2026-11-27 20:40';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -92,6 +92,31 @@
   window.addEventListener('pageshow', function(e){ if (e.persisted) location.replace(withV()); });
   setTimeout(check, 2500);
   setInterval(check, 120000);                          /* W16.89：每 2 分钟自查一次（原 5 分钟） */
+  /* WE7.0：入口路由跟随 —— 正式网址的入口已切到 S1.html（云端 __dev_route 决定）。
+     本页若不是云端指定的入口文件（旧缓存 / 旧链接 / rt_cache 直接落到了本页），
+     打开 2 秒后自动跳到指定文件，玩家不用清缓存也不用等第二次打开 */
+  setTimeout(function () {
+    try {
+      var cur = location.pathname.split('/').pop() || 'index.html';
+      fetch('https://a189ce61ac0be9d3b.app.workbuddy.host/rest/v1/saves?user_id=eq.__dev_route&select=data&sharecode=DRZDPQLGJC',
+        { headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k',
+                     'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k' }, cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (rows) {
+          var d = rows && rows[0] && rows[0].data;
+          if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
+          var t = d && d.target;
+          if (!t || !/^[\w][\w\-./]*\.html$/i.test(t) || /(^|\/)index\.html$/i.test(t)) return;
+          if (t === cur) return;                       // 云端指定的就是本页，不跳
+          try { localStorage.setItem('rt_cache', JSON.stringify({ target: t, ts: Date.now() })); } catch (e) {}
+          var u = new URL(location.href);
+          u.searchParams.set('__v', String(Date.now()));
+          u.pathname = u.pathname.replace(/[^/]*$/, t);
+          location.replace(u.toString());
+        })
+        .catch(function () {});
+    } catch (e) {}
+  }, 2000);
 })();
 </script>
 <style>
