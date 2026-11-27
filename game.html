@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W16.99 2026-11-27 20:40';
+  var BUILD = 'W17.0 2026-11-27 21:10';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -4973,7 +4973,10 @@ function damagePlayer(amount) {
 function emitNoise(x, y, radius) {
   for (var i = 0; i < ais.length; i++) {
     var a = ais[i];
-    if (!a.alive || a.state === 'combat') continue;
+    /* WE7.02：联机队友端跳过回放敌人（remote）—— 回放敌人的 tx/ty 是房主快照
+       目标，本地改了就会被回放逻辑当成新目标把人机「吸」到自己脸上
+       （队友端一开枪附近人机全围过来的「吸兵大法」根因） */
+    if (!a.alive || a.state === 'combat' || a.remote) continue;
     if (Math.hypot(a.x - x, a.y - y) < radius) {
       a.state = 'investigate'; a.tx = x; a.ty = y; a.waitT = 0;
     }
@@ -8478,7 +8481,11 @@ function mpRemoteShot(d) {
         0.14, '#fde047', 0);
     }
   }
-  if (typeof sfx === 'function') sfx('shoot');
+  if (typeof sfx === 'function')   if (typeof sfx === 'function') sfx('shoot');
+  /* WE7.02：房主端听到队友枪声 → 房主 AI 正常警觉、去队友枪声位置查看，
+     再经快照同步给队友，两边表现一致。以前只画弹道不惊动 AI，
+     队友开枪「没效果」，而队友端本地噪音又错改回放目标造成吸兵 */
+  if (mpIsHost() && typeof emitNoise === 'function') emitNoise(a.x, a.y, 460);
 }
 
 /* ---------- 队友每帧插值 ---------- */
@@ -11103,6 +11110,9 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'W17.0', t:'2026年11月27日 21:10', items:[
+    { k:'修复', d:'联机「吸兵大法」修复：队友一开枪附近人机突然围脸——队友端开枪噪音错改了回放敌人的巡逻目标。现在队友开枪只惊动房主端 AI，两边表现一致' }
+  ]},
   { v:'W16.98', t:'2026年11月26日 13:15', items:[
     { k:'品牌', d:'游戏名改回《三角形突围》——听大家的，名字回归' }
   ]},
