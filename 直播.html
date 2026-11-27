@@ -65,9 +65,8 @@
 </header>
 <div class="wrap">
   <div class="sec-t">🔴 正在直播</div>
-  <div id="chlist"><div class="empty">现在没有主播开播<br><b>在游戏主界面点「🔴 直播」即可开播</b></div></div>
-  <div class="sec-t">ℹ️ 怎么开播</div>
-  <div class="empty" style="padding-top:8px">打开游戏 → 主界面右下角「🔴 直播」→ 开播<br>同学们用本页就能直接看你玩，无需屏幕共享</div>
+  <div id="chlist"><div class="empty">现在没有直播，稍后再来看看</div></div>
+
 </div>
 
 <div id="watch">
@@ -93,7 +92,7 @@
 <div id="nickask">
   <div class="nask">
     <h3>进场昵称</h3>
-    <p>直播间聊天用，存在你手机上</p>
+    <p>直播间昵称</p>
     <input id="nickin" maxlength="12" placeholder="给自己起个名字">
     <button id="nickok" type="button">进入直播间</button>
   </div>
@@ -150,7 +149,7 @@ var listTimer = setInterval(function () {
     lives = lives.map(function (r) { r.data = rowData(r); return r; });
     var el = $('chlist');
     if (!lives.length) {
-      el.innerHTML = '<div class="empty">现在没有主播开播<br><b>在游戏主界面点「🔴 直播」即可开播</b></div>';
+      el.innerHTML = '<div class="empty">现在没有直播，稍后再来看看</div>';
       return;
     }
     el.innerHTML = '';
@@ -313,7 +312,7 @@ function tick() {
     var lives = rows.filter(function (r) { var d = rowData(r); return d && d.channel && now - new Date(r.updated_at).getTime() < 20000; });
     lives = lives.map(function (r) { r.data = rowData(r); return r; });
     var el = $('chlist');
-    if (!lives.length) { el.innerHTML = '<div class="empty">现在没有主播开播<br><b>在游戏主界面点「🔴 直播」即可开播</b></div>'; return; }
+    if (!lives.length) { el.innerHTML = '<div class="empty">现在没有直播，稍后再来看看</div>'; return; }
     el.innerHTML = '';
     lives.forEach(function (r) {
       var d = r.data;

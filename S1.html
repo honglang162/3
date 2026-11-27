@@ -1696,7 +1696,7 @@
 
     <div class="start-foot">
       <span class="keys">局内操作：<i>WASD</i> 移动 · <i>鼠标</i> 射击 · <i>R</i> 装填 · <i>C</i> 滑铲 · <i>F</i> 搜刮/撤离 · <i>I</i> 背包 · <i>H</i> 治疗 · <i>O</i> 地图 · <i>M</i> 音效</span>
-      <span>进度保存在本机浏览器 · <button id="sfx-toggle" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">音效：开</button> · <button id="music-btn" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">音乐：关</button> · <button id="tut-mode-btn" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">教程：手游</button> · <button id="start-settings" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">设置</button> · <button id="start-check-update" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">检测更新</button> · <button id="start-changelog" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">更新日记</button> · <button id="start-reset" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">清空存档</button></span>
+      <span>进度保存在本机浏览器 · <button id="sfx-toggle" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">音效：开</button> · <button id="music-btn" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">音乐：关</button> · <button id="tut-mode-btn" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">教程：手游</button> · <button id="start-settings" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">设置</button> · <button id="start-check-update" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">检测更新</button> · <button id="start-changelog" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">更新日记</button> · <button id="start-reset" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px"><button id="live-btn" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">🔴 直播</button> · <button id="start-reset" class="ghost-btn" type="button" style="min-height:24px;padding:2px 8px;font-size:10px">清空存档</button></span>
     </div>
   </div>
 </div>
@@ -12004,14 +12004,8 @@ var CHANGELOG = [
   .dl-card .mp-actions { margin-top:4px; }
   @media (max-width:380px) { .dl-opts { flex-direction:column; } }
 </style>
-<!-- W18.0 曼巴直播 · 游戏内开播（canvas 直采，无需屏幕共享） -->
+<!-- W18.1 曼巴直播 · 游戏内开播（整页画面合成直播） -->
 <style>
-  #live-btn { position:fixed; right:14px; bottom:16px; z-index:1200; display:none; align-items:center; gap:7px;
-    height:44px; padding:0 16px; border:none; border-radius:22px; cursor:pointer;
-    background:linear-gradient(100deg,#ff2d55,#ff5e3a); color:#fff; font-size:14px; font-weight:800; letter-spacing:.06em;
-    box-shadow:0 6px 20px rgba(255,45,85,.4); }
-  body.in-menu #live-btn { display:flex; }
-  #live-btn:active { transform:translateY(1px); }
   #live-panel { position:fixed; inset:0; z-index:1300; display:none; align-items:center; justify-content:center; background:rgba(2,8,18,.78); }
   #live-panel.show { display:flex; }
   .lv-card { width:min(400px,92vw); background:linear-gradient(160deg,#141c2b,#0d1524); border:1px solid #2a3550; border-radius:18px; padding:24px 22px 20px; position:relative; }
@@ -12028,28 +12022,29 @@ var CHANGELOG = [
   .lv-stat { font-size:12px; color:#8b98ad; margin-top:12px; min-height:18px; text-align:center; }
   .lv-stat b { color:#5eead4; }
 </style>
-<button id="live-btn" type="button">🔴 直播</button>
 <div id="live-panel">
   <div class="lv-card">
     <button class="lv-x" id="live-x" type="button">✕</button>
     <h3>曼巴直播 · 开播</h3>
-    <div class="lv-sub">直接直播游戏画面和声音，同学们打开直播页就能看</div>
+    <div class="lv-sub">游戏全画面开播 · 主界面 / 对局 / 结算全部上屏</div>
     <label>直播间名称</label>
     <input type="text" id="live-name" maxlength="16" placeholder="例如：红狼冲分赛">
     <div class="lv-check"><input type="checkbox" id="live-mic"><label for="live-mic" style="margin:0">同时直播我的麦克风解说</label></div>
     <button class="lv-go" id="live-go" type="button">🔴 开 始 直 播</button>
-    <div class="lv-stat" id="live-stat">观众在「曼巴直播」页面观看并聊天</div>
+    <div class="lv-stat" id="live-stat">开播后请保持本页面开启</div>
   </div>
 </div>
 <script>
 (function () {
 'use strict';
-/* ============ 曼巴直播 · 主播端（W18.0）：canvas.captureStream + WebRTC，信令走云端 REST ============ */
+/* ============ 曼巴直播 · 主播端（W18.1）：合成画布整页直播 ============
+   对局时直采游戏画布（24fps）；主菜单 / 商店 / 结算等界面用整页快照（约 1.4fps 刷新）
+   合成到一张广播画布上，观众看到的就是主播看到的整个游戏。 */
 var SB_URL = 'https://a189ce61ac0be9d3b.app.workbuddy.host';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k';
 var SB_SHARE = 'DRZDPQLGJC';
 var ICE_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
-var L = { on: false, pcs: {}, timers: [], stream: null, dest: null, mic: null, chan: null, fbPush: null, origConnect: null, hookedEls: [] };
+var L = { on: false, pcs: {}, timers: [], stream: null, dest: null, mic: null, chan: null, fbPush: null, origConnect: null };
 
 function lapi(path, opt) {
   opt = opt || {};
@@ -12104,7 +12099,6 @@ function hookMediaEl(el, dest, actx) {
     src.connect(actx.destination);
     src.connect(dest);
     el.__lvHooked = true;
-    L.hookedEls.push(el);
   } catch (e) { el.__lvHooked = true; }
 }
 function watchCount() {
@@ -12112,11 +12106,68 @@ function watchCount() {
   Object.keys(L.pcs).forEach(function (k) { if (L.pcs[k].connectionState === 'connected') n++; });
   return n;
 }
+/* ===== 整页合成：广播画布 ===== */
+var bc = document.createElement('canvas');
+var snap = new Image(), snapBusy = false, snapReady = false;
+function menuMode() {
+  if (document.body.classList.contains('in-menu')) return true;
+  var so = document.getElementById('settlement-overlay');
+  if (so && so.classList.contains('open')) return true;
+  var de = document.getElementById('death');
+  if (de && getComputedStyle(de).display !== 'none') return true;
+  return false;
+}
+function refreshSnap() {
+  if (snapBusy || !menuMode()) return;
+  snapBusy = true;
+  try {
+    var de = document.documentElement.cloneNode(true);
+    de.querySelectorAll('script,video,link,noscript,#live-panel').forEach(function (e) { e.remove(); });
+    de.querySelectorAll('img').forEach(function (im) { if (!/^data:/i.test(im.getAttribute('src') || '')) im.removeAttribute('src'); });
+    var xml = new XMLSerializer().serializeToString(de);
+    var W2 = document.documentElement.scrollWidth || innerWidth;
+    var H2 = document.documentElement.scrollHeight || innerHeight;
+    var w = 720, h = Math.round(w * H2 / W2) || 1280;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><foreignObject width="100%" height="100%">' + xml + '</foreignObject></svg>';
+    snap.onload = function () { snapReady = true; snapBusy = false; };
+    snap.onerror = function () { snapBusy = false; };
+    snap.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  } catch (e) { snapBusy = false; }
+}
+function startBroadcastCanvas() {
+  bc.width = 720; bc.height = 1280;
+  var g = bc.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, 720, 1280);
+  /* 快照刷新（仅菜单/结算态） */
+  L.timers.push(setInterval(refreshSnap, 700));
+  refreshSnap();
+  /* 合成循环 ~20fps */
+  L.timers.push(setInterval(function () {
+    if (!L.on) return;
+    if (menuMode()) {
+      if (snapReady && snap.width) {
+        if (bc.width !== snap.width) { bc.width = snap.width; bc.height = snap.height; }
+        g.drawImage(snap, 0, 0);
+      } else {
+        if (bc.width !== 720) { bc.width = 720; bc.height = 1280; }
+        g.fillStyle = '#000'; g.fillRect(0, 0, bc.width, bc.height);
+        g.fillStyle = '#64748b'; g.font = '30px sans-serif';
+        g.fillText('直播画面准备中…', 240, 640);
+      }
+    } else {
+      var src = document.getElementById('c') || document.querySelector('#game-root canvas');
+      if (src && src.width) {
+        var h = Math.round(720 * src.height / src.width) || 1280;
+        if (bc.width !== 720) { bc.width = 720; bc.height = h; }
+        g.drawImage(src, 0, 0, 720, h);
+      }
+    }
+  }, 50));
+  return bc.captureStream(24);
+}
 function liveStart(chan, nick, withMic) {
   if (L.on) return Promise.reject(new Error('已在直播中'));
-  var canvas = document.getElementById('c') || document.querySelector('#game-root canvas');
-  if (!canvas) return Promise.reject(new Error('找不到游戏画面'));
-  var stream = canvas.captureStream(24);
+  var stream = startBroadcastCanvas();
   var actx = ensureAudioCtx();
   if (actx) {
     if (actx.state === 'suspended') actx.resume();
@@ -12130,18 +12181,16 @@ function liveStart(chan, nick, withMic) {
         L.mic = mic;
         actx.createMediaStreamSource(mic).connect(dest);   /* 麦克风只进直播，不外放，避免回声 */
         return begin();
-      }).catch(function () { return begin(); });   /* 拿不到麦克风就只播游戏声 */
+      }).catch(function () { return begin(); });
     }
   }
   return begin();
   function begin() {
     L.on = true; L.chan = chan; L.stream = stream;
-    /* 心跳：直播间列表 */
     L.timers.push(setInterval(function () {
       lput('__live_heart_' + chan, { channel: chan, nick: nick, game: window.__LIVE_GAME || '', viewers: watchCount(), ts: Date.now() });
     }, 3000));
     lput('__live_heart_' + chan, { channel: chan, nick: nick, game: window.__LIVE_GAME || '', viewers: 0, ts: Date.now() });
-    /* 接观众：hello → 生成 offer */
     L.timers.push(setInterval(function () {
       lget('__lv_*').then(function (rows) {
         rows.forEach(function (r) {
@@ -12152,10 +12201,9 @@ function liveStart(chan, nick, withMic) {
           if (d.fb) { startFb(); ldel(r.user_id); return; }
           if (L.pcs[d.v]) return;
           ldel(r.user_id);
-          makeOffer(d.v, nick);
+          makeOffer(d.v);
         });
       });
-      /* 收 answer */
       lget('__la_*').then(function (rows) {
         rows.forEach(function (r) {
           var d = r.data;
@@ -12174,7 +12222,7 @@ function liveStart(chan, nick, withMic) {
     return Promise.resolve();
   }
 }
-function makeOffer(v, nick) {
+function makeOffer(v) {
   var pc = new RTCPeerConnection(ICE_CFG);
   L.pcs[v] = pc;
   try {
@@ -12185,17 +12233,17 @@ function makeOffer(v, nick) {
     .then(function () { return lput('__lo_' + v, { sdp: pc.localDescription.sdp, ts: Date.now() }); })
     .catch(function (e) { delete L.pcs[v]; try { pc.close(); } catch (x) {} });
 }
-/* 降级：某些网络直连不通 → 主播往云端推 JPEG 帧（流畅模式） */
+/* 降级：直连不通 → 往云端推合成画面的 JPEG 帧 */
 function startFb() {
   if (L.fbPush) return;
   var off = document.createElement('canvas');
   var g = off.getContext('2d');
   L.fbPush = setInterval(function () {
     try {
-      var src = document.getElementById('c') || document.querySelector('#game-root canvas');
-      var w = 640, h = Math.round(src.height / src.width * 640);
+      if (!bc.width) return;
+      var w = 640, h = Math.round(bc.height / bc.width * 640) || 1138;
       off.width = w; off.height = h;
-      g.drawImage(src, 0, 0, w, h);
+      g.drawImage(bc, 0, 0, w, h);
       lput('__lf_' + L.chan, { f: off.toDataURL('image/jpeg', 0.45).split(',')[1], ts: Date.now() });
     } catch (e) {}
   }, 300);
@@ -12211,7 +12259,8 @@ function liveStop() {
   }
   if (L.origConnect) { AudioNode.prototype.connect = L.origConnect; L.origConnect = null; }
   if (L.mic) { L.mic.getTracks().forEach(function (t) { t.stop(); }); L.mic = null; }
-  if (L.stream) { L.stream.getVideoTracks().forEach(function (t) { t.stop(); }); L.stream = null; }
+  if (L.stream) { L.stream.getTracks().forEach(function (t) { t.stop(); }); L.stream = null; }
+  snapReady = false; snapBusy = false;
   L.on = false; L.chan = null; L.dest = null;
   lstat('已停播');
 }
@@ -12225,7 +12274,7 @@ document.getElementById('live-btn').addEventListener('click', function () {
     try { if (!def && typeof playerNick === 'function') def = playerNick(); } catch (e) {}
     ni.value = def || '直播间';
   }
-  lstat(L.on ? '直播中 · <b>' + watchCount() + '</b> 人在看' : '观众在「曼巴直播」页面观看并聊天');
+  lstat(L.on ? '直播中 · <b>' + watchCount() + '</b> 人在看' : '开播后请保持本页面开启');
   document.getElementById('live-go').textContent = L.on ? '⏹ 停 播' : '🔴 开 始 直 播';
   document.getElementById('live-go').classList.toggle('stop', L.on);
 });
@@ -12241,9 +12290,7 @@ document.getElementById('live-go').addEventListener('click', function () {
     lstat('直播间已开启，等待观众…');
   }).catch(function (e) { btn.disabled = false; lstat('开播失败：' + e.message); });
 });
-/* 调试/自动化钩子 */
-window.__LIVE_GAME = 's1';
-window.__liveHost = { state: function () { return { on: L.on, chan: L.chan, viewers: watchCount(), pcs: Object.keys(L.pcs).length }; }, start: liveStart, stop: liveStop };
+window.__liveHost = { snap: function () { return { ready: snapReady, w: bc.width, h: bc.height }; }, state: function () { return { on: L.on, chan: L.chan, viewers: watchCount(), pcs: Object.keys(L.pcs).length }; }, start: liveStart, stop: liveStop };
 })();
 </script>
 
