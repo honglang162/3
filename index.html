@@ -29,14 +29,14 @@
    入口跳转页（W16.99）
    正式网址 «/» 打开哪个文件，由开发者控制台的「正式网址打开」开关决定，
    目标存在云端 saves 表的 __dev_route 行，改完立即生效，不用重新发布。
-   读不到配置 / 超时 → 一律回落到 game.html，保证玩家永远进得去。
+   读不到配置 / 超时 → 一律回落到 S1.html，保证玩家永远进得去。
    ========================================================================== */
 (function () {
   'use strict';
   var SB_URL = 'https://a189ce61ac0be9d3b.app.workbuddy.host';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k';
   var SB_SHARE = 'DRZDPQLGJC';
-  var DEFAULT_TARGET = 'game.html';
+  var DEFAULT_TARGET = 'S1.html';
   var jumped = false;
 
   function go(target) {

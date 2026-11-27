@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'W17.15 2026-11-26 22:10';
+  var BUILD = 'WE7.0 2026-11-27 20:00';   // S1 赛季正式上线：全新 WE7.0
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -566,11 +566,6 @@
   .brand .brand-season { margin:11px 0 0; font-size:clamp(17px,2.4vw,22px); font-weight:700;
     line-height:1.1; letter-spacing:.2em; color:#fbbf24;
     text-shadow:0 0 20px rgba(251,191,36,.28); }
-  /* W17.0：S1 测试服小标签 */
-  .brand .season-tag { display:inline-block; font-style:normal; font-size:11px; font-weight:700;
-    letter-spacing:.12em; color:#ff6b3d; border:1px solid #ff6b3d; border-radius:20px;
-    padding:2px 9px; margin-left:8px; vertical-align:2px; background:rgba(255,107,61,.1);
-    box-shadow:0 0 12px rgba(255,107,61,.25); }
   .brand .brand-ver { display:inline-block; margin-top:12px; padding:3px 9px; border:1px solid #1e4d5c; border-radius:4px;
     color:#5f9aa8; font-size:10px; letter-spacing:.14em; }
   /* W16.17：个人卡片放宽行距，信息分行不再挤在一起 */
@@ -1203,25 +1198,6 @@
     letter-spacing:.1em; cursor:pointer; border:1px solid #334155; }
   #credits-mail { background:linear-gradient(180deg,#1d4ed8,#1e3a8a); color:#fff; border-color:#2563eb !important; font-weight:700; }
   #credits-ok { background:#111c2c; color:#cbd5e1; }
-  /* ===== S1 赛季 · 起源 预告面板 ===== */
-  #s1-overlay { position:fixed; inset:0; z-index:1400; display:none; align-items:center; justify-content:center;
-    background:rgba(2,6,12,.82); padding:16px; backdrop-filter:blur(4px); }
-  #s1-overlay.show { display:flex; }
-  #s1-panel { width:100%; max-width:540px; border:1px solid #4b3a26; border-radius:14px;
-    background:linear-gradient(180deg,#131017,#0d1016); padding:26px 24px 20px;
-    box-shadow:0 24px 60px rgba(0,0,0,.6); position:relative; }
-  #s1-panel h2 { font-size:26px; letter-spacing:.14em; color:#e2c87f; margin-bottom:4px; }
-  #s1-panel .s1-when { font-size:12px; color:#f0b429; letter-spacing:.06em; margin-bottom:16px; font-weight:700; }
-  #s1-panel .s1-list { list-style:none; margin:0 0 18px; padding:0; display:flex; flex-direction:column; gap:9px; }
-  #s1-panel .s1-list li { border:1px solid #26364b; border-radius:10px; padding:10px 13px;
-    background:rgba(15,28,42,.5); }
-  #s1-panel .s1-list b { display:block; font-size:15px; color:#f5e6b8; margin-bottom:2px; }
-  #s1-panel .s1-list span { font-size:12.5px; color:#9db7cc; line-height:1.6; }
-  #s1-panel .s1-list i { font-style:normal; font-size:10px; color:#526176; margin-left:8px; }
-  #s1-ok { width:100%; min-height:52px; border-radius:9px; font-size:15px; letter-spacing:.1em; cursor:pointer;
-    background:linear-gradient(180deg,#1d4ed8,#1e3a8a); color:#fff; border-color:#2563eb; font-weight:700; }
-  #s1-close { position:absolute; top:10px; right:14px; width:34px; height:34px; border-radius:50%;
-    border:1px solid #334155; background:#111c2c; color:#cbd5e1; font-size:18px; cursor:pointer; line-height:1; }
   .start-foot { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;
     margin-top:auto; padding-top:16px; border-top:1px solid #1a2637; color:#526176; font-size:10.5px; }
   .start-foot .keys i { font-style:normal; color:#7e8fa3; }
@@ -1743,23 +1719,6 @@
   </div>
 </div>
 
-<div id="s1-overlay" role="dialog" aria-modal="true" aria-labelledby="s1-title">
-  <div id="s1-panel">
-    <button id="s1-close" type="button" aria-label="关闭">×</button>
-    <h2 id="s1-title">S1 赛季 · 源头</h2>
-    <div class="s1-when">✅ 已提前上线 · 正式开放 · 账号与正式服通用</div>
-    <ul class="s1-list">
-      <li><b>🗺️ 地图焕新<i>已上线</i></b><span>每张地图独一无二——布局、地貌、建筑各不相同，告别一模一样</span></li>
-      <li><b>🧰 保险箱扩容<i>已上线</i></b><span>保险箱数量大幅增加，搜刮更有惊喜</span></li>
-      <li><b>🗝️ 房卡房间<i>已上线</i></b><span>每张图外墙外侧挂着 6 个加密房间（雷达站下×2 上×2 左×1 右×1，门直接开在边墙上，房间 460×360 比图内更大）：补给储藏间 / 医疗室 / 军械库 / 情报室 / 起源工作室 / 策划红狼工作室，房卡越贵房内物资越多</span></li>
-      <li><b>🎒 卡包系统<i>已上线</i></b><span>房卡必须装进卡包才能刷卡进房 —— 默认 2 格，商店可升级到 4 格 / 6 格</span></li>
-      <li><b>🪖 全新装备：头盔<i>已上线</i></b><span>头部防护正式登场，防护体系再添一环</span></li>
-      <li><b>🎨 六大品质体系<i>计划中</i></b><span>每种装备都有六档品质：白 · 绿 · 蓝 · 紫 · 金 · 红</span></li>
-    </ul>
-    <button id="s1-ok" type="button">进入源头！</button>
-  </div>
-</div>
-
 <div id="acct-overlay" role="dialog" aria-modal="true" aria-labelledby="acct-title">
   <div id="acct-panel">
     <button class="acct-close" id="acct-close" type="button" aria-label="关闭">×</button>
@@ -1943,7 +1902,6 @@ function portraitPanelOpen() {
   var dl = document.getElementById('dl-panel');
   return !!(document.querySelector('#fr-overlay.show') ||
     document.querySelector('#credits-overlay.show') ||
-    document.querySelector('#s1-overlay.show') ||
     (mu && mu.style.display === 'flex') ||
     (dl && dl.style.display === 'flex'));
 }
@@ -3052,7 +3010,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 else initBgm();
 
 /* ============ W5：仓库、买卖、配装、localStorage 存档 ============ */
-var SAVE_KEY = 'extractionS1.save.v1', SAVE_VER = 2;   // S1：测试服独立本地存档   // W6：新存档结构（安全箱）
+var SAVE_KEY = 'extractionS1.save.v1', SAVE_VER = 2;   // S1 赛季本地存档   // W6：新存档结构（安全箱）
 var equip = { weapon:null, armor:null, pack:null, rig:null, med:null, helmet:null, safebox:null, cardpack:null };  // 装备实例（S1 增加头盔 / 卡包）
 /* W6.3：安全箱两格存放在 SECURE_SLOTS（见上方定义），死亡也不掉落 */
 var stash = [], money = 4500, totalRuns = 0, totalExtracts = 0, totalKills = 0, kindStats = {};
@@ -7303,7 +7261,7 @@ var SB_SHARE = 'DRZDPQLGJC';                      // 托管网关的分享码，
 var OLD_SB_URL = 'https://nshatkznozyhdxdvxtfq.supabase.co';   // 老后端：仅用于老账号首次登录迁移
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k';
 var OLD_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zaGF0a3pub3p5aGR4ZHZ4dGZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MDE0NjAsImV4cCI6MjEwOTA3NzQ2MH0.9A2wLsb9nu-qpkxWAPIrrkGxs9CnIQoBwYqpIKgbZAY';
-var SB_SESSION_KEY = 'extractionS1.acct.sess';   // S1：测试服独立登录态   // 登录态（access/refresh token）
+var SB_SESSION_KEY = 'extractionS1.acct.sess';   // S1 赛季登录态   // 登录态（access/refresh token）
 var sbSess = null;            // { access_token, refresh_token, expires_at, user }
 var cloudTimer = 0, cloudBusy = false, cloudPending = null, cloudErrCount = 0;
 
@@ -7509,13 +7467,11 @@ function validNick(nick) {
    所以在 users 表里自建账号：PBKDF2-SHA256(12 万次) + 随机盐，密码不落明文。
    老玩家第一次登录时，仍用老后端 Supabase 校验一次密码，成功后把存档搬过来并落地本地账号。 */
 var UB_USERS = '/rest/v1/users';
-/* W17.15：源头转正 —— 账号与正式服（S0）完全通用：
-   users 表里就是同一批账号（昵称无前缀），源头不再有自己的账号体系。
-   玩家身份在源头用「s1-正式服uid」表示，存档 / 排行榜 / 好友照旧按赛季隔离 */
+/* WE7.0：S1 赛季正式上线 —— 直接使用 S0 正式服账号体系，uid / 存档 / 排行榜 / 好友
+   全部与正式服完全相同，账号里的东西原封不动，不再做任何赛季隔离 */
 function s1BaseNick(nick) { return String(nick || '').replace(/^S1·/, '').replace(/·测试号$/, ''); }   /* 纯昵称：兼容老库里可能残留的前后缀 */
 function s1StoreNick(nick) { return s1BaseNick(nick); }   /* 库内存原昵称（与正式服一致） */
-function s1Nick(nick) { return s1BaseNick(nick); }   /* 界面显示原昵称（不再加·测试号） */
-function s1UidOf(officialUid) { return 's1-' + officialUid; }   /* 源头身份 = s1- + 正式服 uid，同账号永远同一身份 */
+function s1Nick(nick) { return s1BaseNick(nick); }   /* 界面显示原昵称 */
 function ubB64(buf) { var s2 = '', u = new Uint8Array(buf); for (var i = 0; i < u.length; i++) s2 += String.fromCharCode(u[i]); return btoa(s2); }
 function ubUnb64(str) { var bin = atob(str), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 function ubSalt() { var u = new Uint8Array(16); (crypto.getRandomValues ? crypto.getRandomValues(u) : u.forEach(function(_, i) { u[i] = Math.random() * 256 | 0; })); return ubB64(u); }
@@ -7540,7 +7496,7 @@ function ubUuid() {   /* W17.15：源头注册的新账号直接进正式服账�
   return h.slice(0, 4).join('') + '-' + h.slice(4, 6).join('') + '-' + h.slice(6, 8).join('') + '-' + h.slice(8, 10).join('') + '-' + h.slice(10).join('');
 }
 function ubSetSession(uid, nick) {
-  /* S1：会话里存「显示昵称」（去前缀，保留·测试号），账号面板/ multiplayer 上报都用它 */
+  /* 会话里存「显示昵称」，账号面板 / multiplayer 上报都用它 */
   sbSess = { access_token: SB_KEY, refresh_token: 'local', expires_at: Date.now() + 31536000000,
              local: true, user: { id: uid, email: nickToId(nick), user_metadata: { nick: s1Nick(nick) } } };
   sbStoreSess(sbSess);
@@ -7614,7 +7570,7 @@ function acctSignIn() {
       var u = rows[0];
       return ubHash(p, u.salt).then(function(h) {
         if (h !== u.hash) { fail('昵称或密码错误'); return; }
-        ubSetSession(s1UidOf(u.uid), u.nick);   /* 源头身份 = s1-正式服uid，存档/榜单/好友按赛季隔离 */
+        ubSetSession(u.uid, u.nick);   /* WE7.0：直接用正式服身份，仓库/榜单/好友与 S0 完全一致 */
         acctMsg('登录成功，正在拉取云端存档…', 'ok');
         return cloudPullFirst().then(function(r) {
           if (r === 'pulled') acctMsg('登录成功 · 已载入云端存档', 'ok');
@@ -7640,7 +7596,7 @@ function acctSignUp() {
     if (rows && rows.length) { acctBusy(false); acctMsg('这个昵称已被占用（正式服可能已注册），换一个或直接登录', 'err'); return; }
     var uid = ubUuid();
     return ubCreateUser(nick, p, uid).then(function() {
-      ubSetSession(s1UidOf(uid), nick);
+      ubSetSession(uid, nick);
       acctBusy(false);
       acctMsg('注册成功，欢迎回来，' + s1Nick(nick) + '（源头与正式服通用，两边都能用这个账号登录）', 'ok');
       renderAcctUI();
@@ -7897,7 +7853,7 @@ function lbPush() {
 }
 function lbFetch() {
   /* 多取一些，过滤掉兜底昵称后仍能凑够一屏 */
-  return sbApi('/rest/v1/leaderboard?select=user_id,nick,total,money,extracts,kills,updated_at&order=total.desc,nick.asc&limit=100&user_id=like.s1-*', {});   /* S1：只显示测试服玩家 */
+  return sbApi('/rest/v1/leaderboard?select=user_id,nick,total,money,extracts,kills,updated_at&order=total.desc,nick.asc&limit=100', {});   /* WE7.0：与正式服同一份榜单 */
 }
 function lbRender(rows) {
   var ul = document.getElementById('lb-list');
@@ -8025,24 +7981,6 @@ var S1_ROADMAP = [
 ];
 var S1_LAUNCH = '2026-11-30';   // 上线日期（周一）
 
-/* W16.92 S1 赛季预告面板 —— 点击主界面赛季名打开 */
-(function initS1() {
-  var ov = document.getElementById('s1-overlay');
-  if (!ov) return;
-  function openS1() { ov.classList.add('show'); if (typeof syncPortraitPanels === 'function') syncPortraitPanels(); }
-  function closeS1() { ov.classList.remove('show'); if (typeof syncPortraitPanels === 'function') syncPortraitPanels(); }
-  var bs = document.querySelector('.brand-season');
-  if (bs) {
-    bs.style.cursor = 'pointer';
-    bs.title = '查看 S1 赛季 · 源头预告';
-    bs.addEventListener('click', openS1);
-  }
-  var bc = document.getElementById('s1-close');
-  if (bc) bc.addEventListener('click', closeS1);
-  var bok = document.getElementById('s1-ok');
-  if (bok) bok.addEventListener('click', closeS1);
-  ov.addEventListener('click', function(e) { if (e.target === ov) closeS1(); });
-})();
 
 /* ============ W10：好友 · 私聊（Supabase 表 + Realtime 推送） ============ */
 var frFriends = [];        // [{id, nick}]
@@ -8180,7 +8118,7 @@ function frIsBadNick(nick) {
   return false;
 }
 function frLoadAll() {
-  return sbApi('/rest/v1/user_nicks?select=uid,nick&order=nick.asc&limit=200&uid=like.s1-*', {})   /* S1：只列测试服玩家 */
+  return sbApi('/rest/v1/user_nicks?select=uid,nick&order=nick.asc&limit=200', {})   /* WE7.0：与正式服同一份玩家列表 */
     .then(function(rows) {
       frAll = (rows || []).map(function(r) {
         return { id: r.uid || r.id, nick: s1Nick(r.nick) };     /* S1：去前缀 */
@@ -11647,6 +11585,12 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'WE7.0', t:'2026年11月27日 20:00', items:[
+    { k:'赛季', d:'S1 赛季「源头」正式上线！版本号迈入全新的 WE7.0，不再是测试服' },
+    { k:'账号', d:'账号彻底与 S0 正式服合体：直接用正式服账号登录，仓库、金币、战绩、好友、排行榜原封不动，进游戏就是你现在的一切' },
+    { k:'清理', d:'所有测试服账号与测试数据已彻底删除，服务器只保留正式数据' },
+    { k:'简化', d:'删掉上线弹窗等过渡提示，打开游戏直接玩' }
+  ]},
   { v:'W17.15', t:'2026年11月26日 21:40', items:[
     { k:'赛季', d:'「源头」提前上线！S1 赛季正式开放，不用再等 11 月 30 日' },
     { k:'账号', d:'账号与正式服完全通用：正式服账号直接登录源头，源头注册的新账号正式服也能用；测试服老账号已全部清除' },
