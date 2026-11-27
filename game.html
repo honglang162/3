@@ -11377,5 +11377,248 @@ var CHANGELOG = [
   .dl-card .mp-actions { margin-top:4px; }
   @media (max-width:380px) { .dl-opts { flex-direction:column; } }
 </style>
+<!-- W18.0 曼巴直播 · 游戏内开播（canvas 直采，无需屏幕共享） -->
+<style>
+  #live-btn { position:fixed; right:14px; bottom:16px; z-index:1200; display:none; align-items:center; gap:7px;
+    height:44px; padding:0 16px; border:none; border-radius:22px; cursor:pointer;
+    background:linear-gradient(100deg,#ff2d55,#ff5e3a); color:#fff; font-size:14px; font-weight:800; letter-spacing:.06em;
+    box-shadow:0 6px 20px rgba(255,45,85,.4); }
+  body.in-menu #live-btn { display:flex; }
+  #live-btn:active { transform:translateY(1px); }
+  #live-panel { position:fixed; inset:0; z-index:1300; display:none; align-items:center; justify-content:center; background:rgba(2,8,18,.78); }
+  #live-panel.show { display:flex; }
+  .lv-card { width:min(400px,92vw); background:linear-gradient(160deg,#141c2b,#0d1524); border:1px solid #2a3550; border-radius:18px; padding:24px 22px 20px; position:relative; }
+  .lv-x { position:absolute; top:10px; right:12px; width:30px; height:30px; border:none; border-radius:50%; background:rgba(148,163,184,.14); color:#94a3b8; font-size:16px; cursor:pointer; }
+  .lv-card h3 { font-size:18px; color:#fff; letter-spacing:.08em; margin-bottom:4px; }
+  .lv-card .lv-sub { font-size:11.5px; color:#8b98ad; margin-bottom:16px; }
+  .lv-card label { display:block; font-size:12px; color:#8b98ad; margin:12px 0 6px; }
+  .lv-card input[type=text] { width:100%; height:44px; border-radius:10px; border:1px solid #223047; background:#0a111e; color:#eef2f8; padding:0 12px; font-size:15px; }
+  .lv-check { display:flex; align-items:center; gap:8px; font-size:13px; color:#cbd5e1; margin-top:12px; }
+  .lv-check input { width:17px; height:17px; }
+  .lv-go { width:100%; height:48px; margin-top:18px; border:none; border-radius:12px; background:linear-gradient(100deg,#ff2d55,#ff5e3a);
+    color:#fff; font-size:16px; font-weight:800; letter-spacing:.1em; cursor:pointer; }
+  .lv-go.stop { background:#334155; }
+  .lv-stat { font-size:12px; color:#8b98ad; margin-top:12px; min-height:18px; text-align:center; }
+  .lv-stat b { color:#5eead4; }
+</style>
+<button id="live-btn" type="button">🔴 直播</button>
+<div id="live-panel">
+  <div class="lv-card">
+    <button class="lv-x" id="live-x" type="button">✕</button>
+    <h3>曼巴直播 · 开播</h3>
+    <div class="lv-sub">直接直播游戏画面和声音，同学们打开直播页就能看</div>
+    <label>直播间名称</label>
+    <input type="text" id="live-name" maxlength="16" placeholder="例如：红狼冲分赛">
+    <div class="lv-check"><input type="checkbox" id="live-mic"><label for="live-mic" style="margin:0">同时直播我的麦克风解说</label></div>
+    <button class="lv-go" id="live-go" type="button">🔴 开 始 直 播</button>
+    <div class="lv-stat" id="live-stat">观众在「曼巴直播」页面观看并聊天</div>
+  </div>
+</div>
+<script>
+(function () {
+'use strict';
+/* ============ 曼巴直播 · 主播端（W18.0）：canvas.captureStream + WebRTC，信令走云端 REST ============ */
+var SB_URL = 'https://a189ce61ac0be9d3b.app.workbuddy.host';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k';
+var SB_SHARE = 'DRZDPQLGJC';
+var ICE_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+var L = { on: false, pcs: {}, timers: [], stream: null, dest: null, mic: null, chan: null, fbPush: null, origConnect: null, hookedEls: [] };
+
+function lapi(path, opt) {
+  opt = opt || {};
+  var q = (path.indexOf('?') >= 0 ? '&' : '?') + 'sharecode=' + SB_SHARE;
+  return fetch(SB_URL + '/rest/v1' + path + q, {
+    method: opt.method || 'GET',
+    headers: Object.assign({ 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }, opt.headers || {}),
+    body: opt.body, cache: 'no-store'
+  }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var ct = r.headers.get('content-type') || '';
+    return ct.indexOf('json') >= 0 ? r.json() : r.text();
+  });
+}
+function lput(uid, data) {
+  return lapi('/saves?on_conflict=user_id', { method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: uid, data: data, updated_at: new Date().toISOString() }) });
+}
+function lget(prefix) { return lapi('/saves?user_id=like.' + encodeURIComponent(prefix) + '&select=user_id,data,updated_at').catch(function () { return []; }); }
+function ldel(uid) { return lapi('/saves?user_id=eq.' + encodeURIComponent(uid), { method: 'DELETE' }).catch(function () {}); }
+function lstat(html) { document.getElementById('live-stat').innerHTML = html; }
+function gatherDone(pc) {
+  return new Promise(function (res) {
+    if (pc.iceGatheringState === 'complete') return res();
+    var t = setTimeout(res, 2500);
+    pc.addEventListener('icegatheringstatechange', function () {
+      if (pc.iceGatheringState === 'complete') { clearTimeout(t); res(); }
+    });
+  });
+}
+function ensureAudioCtx() {
+  try { if (typeof ensureAudio === 'function') return ensureAudio(); } catch (e) {}
+  try { if (typeof audioCtx !== 'undefined' && audioCtx) return audioCtx; } catch (e) {}
+  try { return new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+}
+/* 把游戏声音接进直播流：挂 BGM 等媒体元素 + 拦截 connect(audioCtx.destination) */
+function hookGameAudio(dest, actx) {
+  try {
+    var orig = AudioNode.prototype.connect;
+    L.origConnect = orig;
+    AudioNode.prototype.connect = function (node) {
+      var r = orig.apply(this, arguments);
+      try { if (node === actx.destination && this.context === actx) orig.call(this, dest); } catch (e) {}
+      return r;
+    };
+    document.querySelectorAll('audio,video').forEach(function (el) { hookMediaEl(el, dest, actx); });
+  } catch (e) {}
+}
+function hookMediaEl(el, dest, actx) {
+  if (el.__lvHooked || !actx) return;
+  try {
+    var src = actx.createMediaElementSource(el);
+    src.connect(actx.destination);
+    src.connect(dest);
+    el.__lvHooked = true;
+    L.hookedEls.push(el);
+  } catch (e) { el.__lvHooked = true; }
+}
+function watchCount() {
+  var n = 0;
+  Object.keys(L.pcs).forEach(function (k) { if (L.pcs[k].connectionState === 'connected') n++; });
+  return n;
+}
+function liveStart(chan, nick, withMic) {
+  if (L.on) return Promise.reject(new Error('已在直播中'));
+  var canvas = document.getElementById('c') || document.querySelector('#game-root canvas');
+  if (!canvas) return Promise.reject(new Error('找不到游戏画面'));
+  var stream = canvas.captureStream(24);
+  var actx = ensureAudioCtx();
+  if (actx) {
+    if (actx.state === 'suspended') actx.resume();
+    var dest = actx.createMediaStreamDestination();
+    L.dest = dest;
+    hookGameAudio(dest, actx);
+    document.querySelectorAll('audio,video').forEach(function (el) { hookMediaEl(el, dest, actx); });
+    dest.stream.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
+    if (withMic && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (mic) {
+        L.mic = mic;
+        actx.createMediaStreamSource(mic).connect(dest);   /* 麦克风只进直播，不外放，避免回声 */
+        return begin();
+      }).catch(function () { return begin(); });   /* 拿不到麦克风就只播游戏声 */
+    }
+  }
+  return begin();
+  function begin() {
+    L.on = true; L.chan = chan; L.stream = stream;
+    /* 心跳：直播间列表 */
+    L.timers.push(setInterval(function () {
+      lput('__live_heart_' + chan, { channel: chan, nick: nick, game: window.__LIVE_GAME || '', viewers: watchCount(), ts: Date.now() });
+    }, 3000));
+    lput('__live_heart_' + chan, { channel: chan, nick: nick, game: window.__LIVE_GAME || '', viewers: 0, ts: Date.now() });
+    /* 接观众：hello → 生成 offer */
+    L.timers.push(setInterval(function () {
+      lget('__lv_*').then(function (rows) {
+        rows.forEach(function (r) {
+          var d = r.data;
+          if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { return; } }
+          if (!d || !d.v || d.channel !== chan) return;
+          if (Date.now() - (d.ts || 0) > 15000) { ldel(r.user_id); return; }
+          if (d.fb) { startFb(); ldel(r.user_id); return; }
+          if (L.pcs[d.v]) return;
+          ldel(r.user_id);
+          makeOffer(d.v, nick);
+        });
+      });
+      /* 收 answer */
+      lget('__la_*').then(function (rows) {
+        rows.forEach(function (r) {
+          var d = r.data;
+          if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { return; } }
+          if (!d || !d.sdp) return;
+          var v = r.user_id.replace('__la_', '');
+          if (L.pcs[v] && L.pcs[v].signalingState === 'have-local-offer') {
+            L.pcs[v].setRemoteDescription({ type: 'answer', sdp: d.sdp }).catch(function () {});
+          }
+          ldel(r.user_id);
+        });
+      });
+      lstat('直播中 · <b>' + watchCount() + '</b> 人在看');
+    }, 1500));
+    lstat('直播间已开启，等待观众…');
+    return Promise.resolve();
+  }
+}
+function makeOffer(v, nick) {
+  var pc = new RTCPeerConnection(ICE_CFG);
+  L.pcs[v] = pc;
+  try {
+    L.stream.getTracks().forEach(function (t) { pc.addTrack(t, L.stream); });
+  } catch (e) {}
+  pc.createOffer().then(function (off) { return pc.setLocalDescription(off); })
+    .then(function () { return gatherDone(pc); })
+    .then(function () { return lput('__lo_' + v, { sdp: pc.localDescription.sdp, ts: Date.now() }); })
+    .catch(function (e) { delete L.pcs[v]; try { pc.close(); } catch (x) {} });
+}
+/* 降级：某些网络直连不通 → 主播往云端推 JPEG 帧（流畅模式） */
+function startFb() {
+  if (L.fbPush) return;
+  var off = document.createElement('canvas');
+  var g = off.getContext('2d');
+  L.fbPush = setInterval(function () {
+    try {
+      var src = document.getElementById('c') || document.querySelector('#game-root canvas');
+      var w = 640, h = Math.round(src.height / src.width * 640);
+      off.width = w; off.height = h;
+      g.drawImage(src, 0, 0, w, h);
+      lput('__lf_' + L.chan, { f: off.toDataURL('image/jpeg', 0.45).split(',')[1], ts: Date.now() });
+    } catch (e) {}
+  }, 300);
+}
+function liveStop() {
+  Object.keys(L.pcs).forEach(function (k) { try { L.pcs[k].close(); } catch (e) {} });
+  L.pcs = {};
+  L.timers.forEach(clearInterval); L.timers = [];
+  if (L.fbPush) { clearInterval(L.fbPush); L.fbPush = null; }
+  if (L.chan) {
+    ldel('__live_heart_' + L.chan);
+    ldel('__lf_' + L.chan);
+  }
+  if (L.origConnect) { AudioNode.prototype.connect = L.origConnect; L.origConnect = null; }
+  if (L.mic) { L.mic.getTracks().forEach(function (t) { t.stop(); }); L.mic = null; }
+  if (L.stream) { L.stream.getVideoTracks().forEach(function (t) { t.stop(); }); L.stream = null; }
+  L.on = false; L.chan = null; L.dest = null;
+  lstat('已停播');
+}
+/* ============ UI ============ */
+document.getElementById('live-btn').addEventListener('click', function () {
+  document.getElementById('live-panel').classList.add('show');
+  var ni = document.getElementById('live-name');
+  if (!ni.value) {
+    var def = '';
+    try { if (typeof s1Nick === 'function') def = s1Nick(localStorage.getItem('extractionS1.acct.nick') || ''); } catch (e) {}
+    try { if (!def && typeof playerNick === 'function') def = playerNick(); } catch (e) {}
+    ni.value = def || '直播间';
+  }
+  lstat(L.on ? '直播中 · <b>' + watchCount() + '</b> 人在看' : '观众在「曼巴直播」页面观看并聊天');
+  document.getElementById('live-go').textContent = L.on ? '⏹ 停 播' : '🔴 开 始 直 播';
+  document.getElementById('live-go').classList.toggle('stop', L.on);
+});
+document.getElementById('live-x').addEventListener('click', function () { document.getElementById('live-panel').classList.remove('show'); });
+document.getElementById('live-go').addEventListener('click', function () {
+  if (L.on) { liveStop(); this.textContent = '🔴 开 始 直 播'; this.classList.remove('stop'); return; }
+  var chan = document.getElementById('live-name').value.trim() || '直播间';
+  var btn = this;
+  btn.disabled = true; lstat('正在开启…');
+  liveStart(chan, chan, document.getElementById('live-mic').checked).then(function () {
+    btn.disabled = false;
+    btn.textContent = '⏹ 停 播'; btn.classList.add('stop');
+    lstat('直播间已开启，等待观众…');
+  }).catch(function (e) { btn.disabled = false; lstat('开播失败：' + e.message); });
+});
+/* 调试/自动化钩子 */
+window.__LIVE_GAME = '';
+window.__liveHost = { state: function () { return { on: L.on, chan: L.chan, viewers: watchCount(), pcs: Object.keys(L.pcs).length }; }, start: liveStart, stop: liveStop };
+})();
+</script>
+
 </body>
 </html>

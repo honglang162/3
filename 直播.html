@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<title>曼巴直播 · 三角形突围赛事直播</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#0a0f1a; --card:#141c2b; --pri:#ff2d55; --txt:#eef2f8; --mut:#8b98ad; --bd:#223047; }
+  body { font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:radial-gradient(900px 500px at 50% -10%,#152238 0%,var(--bg) 60%); color:var(--txt); min-height:100vh; }
+  header { display:flex; align-items:center; gap:10px; padding:16px 18px 6px; }
+  .logo { width:38px; height:38px; border-radius:11px; background:#0a0a0c; display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 1px #2a3550; }
+  .logo i { width:14px; height:14px; border-radius:50%; background:var(--pri); box-shadow:0 0 12px var(--pri); }
+  h1 { font-size:19px; letter-spacing:.06em; }
+  h1 small { display:block; font-size:10.5px; color:var(--mut); font-weight:400; letter-spacing:.18em; margin-top:2px; }
+  .wrap { max-width:860px; margin:0 auto; padding:12px 14px 90px; }
+  .sec-t { font-size:13px; color:var(--mut); letter-spacing:.2em; margin:14px 2px 10px; }
+  /* 频道卡片 */
+  .ch { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--bd); border-radius:14px; padding:13px 14px; margin-bottom:10px; cursor:pointer; }
+  .ch:active { transform:scale(.985); }
+  .ch .av { width:46px; height:46px; border-radius:12px; flex:0 0 auto; background:#1d2a44; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .ch .nm { font-size:15px; font-weight:700; }
+  .ch .info { font-size:11.5px; color:var(--mut); margin-top:3px; }
+  .live-tag { margin-left:auto; flex:0 0 auto; font-size:11px; font-weight:800; color:#fff; background:var(--pri); border-radius:6px; padding:3px 9px; letter-spacing:.1em; animation:blink 1.6s infinite; }
+  @keyframes blink { 50% { opacity:.55; } }
+  .empty { text-align:center; color:var(--mut); font-size:13px; padding:38px 0 26px; line-height:2; }
+  .empty b { color:var(--txt); }
+  /* 观看层 */
+  #watch { position:fixed; inset:0; z-index:50; background:#000; display:none; flex-direction:column; }
+  #watch.show { display:flex; }
+  #stage { flex:1; min-height:0; position:relative; background:#000; display:flex; align-items:center; justify-content:center; }
+  #video,#fcanvas { width:100%; height:100%; object-fit:contain; background:#000; }
+  #fcanvas { display:none; }
+  .wtop { position:absolute; top:0; left:0; right:0; display:flex; align-items:center; gap:10px; padding:12px 14px; background:linear-gradient(rgba(0,0,0,.65),transparent); z-index:3; }
+  .wtop .live-tag { animation:none; }
+  .wtop .wnm { font-size:14px; font-weight:700; text-shadow:0 1px 4px #000; }
+  .wtop .cnt { font-size:11.5px; color:#cbd5e1; text-shadow:0 1px 4px #000; }
+  #wclose { margin-left:auto; width:36px; height:36px; border:none; border-radius:50%; background:rgba(20,28,43,.85); color:#fff; font-size:17px; cursor:pointer; }
+  #wstat { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--mut); font-size:13.5px; z-index:2; text-align:center; line-height:2; }
+  /* 聊天 */
+  #chatbox { height:34vh; min-height:200px; display:flex; flex-direction:column; background:var(--bg); border-top:1px solid var(--bd); }
+  #chatlog { flex:1; overflow-y:auto; padding:10px 14px; display:flex; flex-direction:column; gap:6px; }
+  .cline { font-size:13px; line-height:1.5; word-break:break-all; }
+  .cline b { color:#5eead4; margin-right:6px; }
+  .cline.sys { color:var(--mut); font-size:12px; }
+  #chatrow { display:flex; gap:8px; padding:9px 12px calc(9px + env(safe-area-inset-bottom)); border-top:1px solid var(--bd); }
+  #chatin { flex:1; min-width:0; height:40px; border-radius:10px; border:1px solid var(--bd); background:var(--card); color:var(--txt); padding:0 12px; font-size:14px; }
+  #chatsend { flex:0 0 auto; width:64px; height:40px; border:none; border-radius:10px; background:var(--pri); color:#fff; font-size:14px; font-weight:700; cursor:pointer; }
+  /* 名片弹窗 */
+  #nickask { position:fixed; inset:0; z-index:80; background:rgba(2,8,18,.8); display:none; align-items:center; justify-content:center; }
+  #nickask.show { display:flex; }
+  .nask { width:min(360px,90vw); background:var(--card); border:1px solid var(--bd); border-radius:16px; padding:22px 20px; }
+  .nask h3 { font-size:16px; margin-bottom:6px; }
+  .nask p { font-size:12px; color:var(--mut); margin-bottom:14px; }
+  .nask input { width:100%; height:44px; border-radius:10px; border:1px solid var(--bd); background:#0d1524; color:var(--txt); padding:0 12px; font-size:15px; margin-bottom:14px; }
+  .nask button { width:100%; height:44px; border:none; border-radius:10px; background:var(--pri); color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
+  .toast { position:fixed; left:50%; bottom:110px; transform:translateX(-50%); background:rgba(20,28,43,.95); border:1px solid var(--bd); color:var(--txt); font-size:13px; border-radius:10px; padding:9px 16px; z-index:99; opacity:0; transition:.25s; pointer-events:none; }
+  .toast.on { opacity:1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><i></i></div>
+  <h1>曼巴直播<small>MAMBA LIVE · 三角形突围赛事</small></h1>
+</header>
+<div class="wrap">
+  <div class="sec-t">🔴 正在直播</div>
+  <div id="chlist"><div class="empty">现在没有主播开播<br><b>在游戏主界面点「🔴 直播」即可开播</b></div></div>
+  <div class="sec-t">ℹ️ 怎么开播</div>
+  <div class="empty" style="padding-top:8px">打开游戏 → 主界面右下角「🔴 直播」→ 开播<br>同学们用本页就能直接看你玩，无需屏幕共享</div>
+</div>
+
+<div id="watch">
+  <div id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="fcanvas"></canvas>
+    <div id="wstat">正在连接直播间…</div>
+    <div class="wtop">
+      <span class="live-tag">LIVE</span>
+      <div><div class="wnm" id="wname">—</div><div class="cnt" id="wcnt"></div></div>
+      <button id="wclose" type="button">✕</button>
+    </div>
+  </div>
+  <div id="chatbox">
+    <div id="chatlog"></div>
+    <div id="chatrow">
+      <input id="chatin" maxlength="60" placeholder="说点什么…">
+      <button id="chatsend" type="button">发送</button>
+    </div>
+  </div>
+</div>
+
+<div id="nickask">
+  <div class="nask">
+    <h3>进场昵称</h3>
+    <p>直播间聊天用，存在你手机上</p>
+    <input id="nickin" maxlength="12" placeholder="给自己起个名字">
+    <button id="nickok" type="button">进入直播间</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+'use strict';
+/* ================= 后端（与游戏同一套） ================= */
+var SB_URL = 'https://a189ce61ac0be9d3b.app.workbuddy.host';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1bmJhc2UiLCJyb2xlIjoiYW5vbiIsInByb2plY3QiOiJwXzdmNDFjZWY5ZWEwNCIsInJlZiI6ImIxZWU0ZjRlNTkwMSIsImlhdCI6MTc5NDgzMjk0MX0.vCVpMj1yW-uv2uum4H5DBI5uQ7yc6S1DqFMAG6Mhj1k';
+var SB_SHARE = 'DRZDPQLGJC';
+var ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+
+function api(path, opt) {
+  opt = opt || {};
+  var q = (path.indexOf('?') >= 0 ? '&' : '?') + 'sharecode=' + SB_SHARE;
+  return fetch(SB_URL + '/rest/v1' + path + q, {
+    method: opt.method || 'GET',
+    headers: Object.assign({ 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }, opt.headers || {}),
+    body: opt.body,
+    cache: 'no-store'
+  }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var ct = r.headers.get('content-type') || '';
+    return ct.indexOf('json') >= 0 ? r.json() : r.text();
+  });
+}
+function putRow(uid, data) {
+  return api('/saves?on_conflict=user_id', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ user_id: uid, data: data, updated_at: new Date().toISOString() })
+  });
+}
+function getRows(prefix) {
+  return api('/saves?user_id=like.' + encodeURIComponent(prefix) + '&select=user_id,data,updated_at').catch(function () { return []; });
+}
+function delRow(uid) {
+  return api('/saves?user_id=eq.' + encodeURIComponent(uid), { method: 'DELETE' }).catch(function () {});
+}
+function $(id) { return document.getElementById(id); }
+function toast(t) { var e = $('toast'); e.textContent = t; e.classList.add('on'); setTimeout(function () { e.classList.remove('on'); }, 2200); }
+function vid() { return 'v' + Math.random().toString(36).slice(2, 10); }
+function rowData(r) { var d = r.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { return null; } } return d; }
+
+window.__dbgViewer = function(){ return W.pc ? W.pc.connectionState : 'no-pc'; };
+/* ================= 频道列表（每 3 秒轮播） ================= */
+var listTimer = setInterval(function () {
+  getRows('__live_heart_*').then(function (rows) {
+    var now = Date.now();
+    var lives = rows.filter(function (r) { var d = rowData(r); return d && d.channel && now - new Date(r.updated_at).getTime() < 20000; });
+    lives = lives.map(function (r) { r.data = rowData(r); return r; });
+    var el = $('chlist');
+    if (!lives.length) {
+      el.innerHTML = '<div class="empty">现在没有主播开播<br><b>在游戏主界面点「🔴 直播」即可开播</b></div>';
+      return;
+    }
+    el.innerHTML = '';
+    lives.forEach(function (r) {
+      var d = r.data;
+      var div = document.createElement('div');
+      div.className = 'ch';
+      div.innerHTML = '<div class="av">🎮</div><div><div class="nm"></div><div class="info"></div></div><span class="live-tag">LIVE</span>';
+      div.querySelector('.nm').textContent = d.channel;
+      div.querySelector('.info').textContent = (d.nick || '主播') + ' · ' + (d.game === 's1' ? 'S1 源头' : 'S0 正式服') + ' · ' + (d.viewers || 0) + ' 人在看';
+      div.addEventListener('click', function () { watch(r.user_id, d); });
+      el.appendChild(div);
+    });
+  });
+}, 3000);
+
+/* ================= 观看 ================= */
+var W = { pc: null, my: null, chan: null, timers: [], fb: false, fbTimer: null, heartTimer: null, connected: false };
+
+function wstat(t) { $('wstat').textContent = t; $('wstat').style.display = t ? 'flex' : 'none'; }
+function chatLine(html, cls) {
+  var d = document.createElement('div');
+  d.className = 'cline' + (cls ? ' ' + cls : '');
+  d.innerHTML = html;
+  $('chatlog').appendChild(d);
+  $('chatlog').scrollTop = 1e6;
+}
+function esc(s) { return String(s).replace(/[<>&"]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]; }); }
+
+function watch(hostUid, d) {
+  var nick = localStorage.getItem('mamba.nick');
+  if (!nick) { $('nickask').classList.add('show'); $('nickin').focus(); pendingWatch = { hostUid: hostUid, d: d }; return; }
+  startWatch(hostUid, d, nick);
+}
+var pendingWatch = null;
+$('nickok').addEventListener('click', function () {
+  var n = $('nickin').value.trim();
+  if (!n) { toast('先起个名字'); return; }
+  localStorage.setItem('mamba.nick', n);
+  $('nickask').classList.remove('show');
+  if (pendingWatch) { var p = pendingWatch; pendingWatch = null; startWatch(p.hostUid, p.d, n); }
+});
+
+function startWatch(hostUid, d, nick) {
+  W.my = vid();
+  W.chan = d.channel;
+  $('wname').textContent = d.channel;
+  $('wcnt').textContent = d.viewers ? d.viewers + ' 人在看' : '';
+  $('watch').classList.add('show');
+  $('chatlog').innerHTML = '';
+  chatLine('已进入 ' + esc(d.channel) + ' 的直播间，做个有素质的观众哦', 'sys');
+  clearInterval(listTimer);
+  W.heartTimer = setInterval(function () { putRow('__lv_' + W.my, { type: 'hello', channel: W.chan, v: W.my, nick: nick, ts: Date.now() }); }, 1500);
+  putRow('__lv_' + W.my, { type: 'hello', channel: W.chan, v: W.my, nick: nick, ts: Date.now() });
+  wstat('正在呼叫主播…');
+  /* 等 host 的 offer */
+  var waited = 0;
+  var t = setInterval(function () {
+    waited += 1500;
+    api('/saves?user_id=eq.__lo_' + W.my + '&select=data').then(function (rows) {
+      var od = rows && rows.length ? rowData(rows[0]) : null;
+      if (od && od.sdp) {
+        clearInterval(t);
+        delRow('__lo_' + W.my);
+        answer(od.sdp, hostUid);
+      } else if (od && od.fb) {
+        /* 主播切了降级模式 → 拉帧流 */
+        clearInterval(t);
+        startFallback(hostUid);
+      } else if (waited > 30000) {
+        clearInterval(t);
+        wstat('主播没有响应，可能已下播');
+      }
+    });
+  }, 1500);
+  W.timers.push(t);
+}
+
+function answer(sdp, hostUid) {
+  var pc = new RTCPeerConnection(ICE);
+  W.pc = pc;
+  pc.ontrack = function (e) {
+    var v = $('video');
+    v.srcObject = e.streams[0];
+    v.muted = false;
+    v.play().catch(function () {});
+    wstat('');
+    W.connected = true;
+    chatLine('画面接通了，直播开始！', 'sys');
+  };
+  pc.onconnectionstatechange = function () {
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+      if (!W.fb) { chatLine('直连断了，试试刷新重进', 'sys'); }
+    }
+  };
+  pc.setRemoteDescription({ type: 'offer', sdp: sdp }).then(function () {
+    return pc.createAnswer();
+  }).then(function (ans) {
+    return pc.setLocalDescription(ans);
+  }).then(function () {
+    return gatherDone(pc);
+  }).then(function () {
+    return putRow('__la_' + W.my, { type: 'answer', sdp: pc.localDescription.sdp, ts: Date.now() });
+  }).then(function () {
+    wstat('正在接通画面…');
+  }).catch(function (e) { wstat('接通失败：' + e.message); });
+}
+
+function gatherDone(pc) {
+  return new Promise(function (res) {
+    if (pc.iceGatheringState === 'complete') return res();
+    var t = setTimeout(res, 2500);   /* 2.5 秒兜底，收集得差不多就发 */
+    pc.addEventListener('icegatheringstatechange', function () {
+      if (pc.iceGatheringState === 'complete') { clearTimeout(t); res(); }
+    });
+  });
+}
+
+/* 降级：拉 JPEG 帧流（主播画到云端的帧） */
+function startFallback(hostUid) {
+  W.fb = true;
+  $('video').style.display = 'none';
+  $('fcanvas').style.display = 'block';
+  wstat('已切换到流畅模式');
+  var img = new Image();
+  W.fbTimer = setInterval(function () {
+    api('/saves?user_id=eq.__lf_' + encodeURIComponent(W.chan) + '&select=data').then(function (rows) {
+      var fd = rows && rows.length ? rowData(rows[0]) : null;
+      if (fd && fd.f) {
+        img.onload = function () {
+          var c = $('fcanvas');
+          if (c.width !== img.width) { c.width = img.width; c.height = img.height; }
+          c.getContext('2d').drawImage(img, 0, 0);
+          wstat('');
+        };
+        img.src = 'data:image/jpeg;base64,' + fd.f;
+      }
+    }).catch(function () {});
+  }, 300);
+}
+
+function stopWatch() {
+  clearInterval(listTimer);
+  W.timers.forEach(clearInterval);
+  if (W.heartTimer) clearInterval(W.heartTimer);
+  if (W.fbTimer) clearInterval(W.fbTimer);
+  if (W.pc) { try { W.pc.close(); } catch (e) {} }
+  if (W.my) delRow('__lv_' + W.my);
+  try { $('video').pause(); } catch (e) {}
+  $('video').srcObject = null;
+  $('watch').classList.remove('show');
+  $('video').style.display = 'block';
+  $('fcanvas').style.display = 'none';
+  W = { pc: null, my: null, chan: null, timers: [], fb: false, fbTimer: null, heartTimer: null, connected: false };
+  listTimer = setInterval(tick, 3000);
+}
+function tick() {
+  getRows('__live_heart_*').then(function (rows) {
+    var now = Date.now();
+    var lives = rows.filter(function (r) { var d = rowData(r); return d && d.channel && now - new Date(r.updated_at).getTime() < 20000; });
+    lives = lives.map(function (r) { r.data = rowData(r); return r; });
+    var el = $('chlist');
+    if (!lives.length) { el.innerHTML = '<div class="empty">现在没有主播开播<br><b>在游戏主界面点「🔴 直播」即可开播</b></div>'; return; }
+    el.innerHTML = '';
+    lives.forEach(function (r) {
+      var d = r.data;
+      var div = document.createElement('div');
+      div.className = 'ch';
+      div.innerHTML = '<div class="av">🎮</div><div><div class="nm"></div><div class="info"></div></div><span class="live-tag">LIVE</span>';
+      div.querySelector('.nm').textContent = d.channel;
+      div.querySelector('.info').textContent = (d.nick || '主播') + ' · ' + (d.game === 's1' ? 'S1 源头' : 'S0 正式服') + ' · ' + (d.viewers || 0) + ' 人在看';
+      div.addEventListener('click', function () { watch(r.user_id, d); });
+      el.appendChild(div);
+    });
+  });
+}
+$('wclose').addEventListener('click', stopWatch);
+
+/* ================= 聊天 ================= */
+var seenChat = {};
+setInterval(function () {
+  if (!$('watch').classList.contains('show') || !W.chan) return;
+  getRows('__lc_*').then(function (rows) {
+    var now = Date.now();
+    rows.map(function (r) { return rowData(r); })
+      .filter(function (d) { return d && d.channel === W.chan && d.ts && now - d.ts < 300000 && !seenChat[d.ts + d.nick]; })
+      .sort(function (a, b) { return a.ts - b.ts; })
+      .forEach(function (d) {
+        seenChat[d.ts + d.nick] = 1;
+        chatLine('<b>' + esc(d.nick) + '</b>' + esc(d.text));
+      });
+    /* 顺手清 5 分钟前的旧消息行 */
+    rows.forEach(function (r) {
+      var d = rowData(r);
+      if (d && d.ts && now - d.ts > 360000) delRow(r.user_id);
+    });
+  });
+}, 2000);
+function sendChat() {
+  var t = $('chatin').value.trim();
+  if (!t) return;
+  if (!W.chan) { toast('先进入一个直播间'); return; }
+  var nick = localStorage.getItem('mamba.nick') || '观众';
+  var ts = Date.now();
+  seenChat[ts + nick] = 1;
+  putRow('__lc_' + ts + '_' + Math.random().toString(36).slice(2, 6), { channel: W.chan, nick: nick, text: t, ts: ts });
+  chatLine('<b>' + esc(nick) + '</b>' + esc(t));
+  $('chatin').value = '';
+}
+$('chatsend').addEventListener('click', sendChat);
+$('chatin').addEventListener('keydown', function (e) { if (e.key === 'Enter') sendChat(); });
+})();
+</script>
+</body>
+</html>
