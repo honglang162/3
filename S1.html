@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'WE7.0 2026-11-27 20:00';   // S1 赛季正式上线：全新 WE7.0
+  var BUILD = 'WE7.01 2026-11-27 20:45';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -7275,7 +7275,19 @@ function sbLoadSess() {
       try { localStorage.removeItem(SB_SESSION_KEY); } catch (e2) {}
       s = null;
     }
-    if (s && s.access_token && s.user) { sbSess = s; return true; }
+    if (s && s.access_token && s.user) {
+      /* WE7.0：老版本（W17.15 测试期）存在本地的会话身份带「s1-」前缀，
+         正式服身份没有前缀 —— 恢复会话时统一剥掉，不然会登回测试身份、
+         拉到测试期的旧档，玩家会以为正式存档丢了 */
+      try {
+        if (s.user && typeof s.user.id === 'string' && s.user.id.indexOf('s1-') === 0) {
+          s.user.id = s.user.id.slice(3);
+          localStorage.setItem(SB_SESSION_KEY, JSON.stringify(s));
+          window.__s1SessionFixed = true;   /* 本次剥过前缀：本地档必是测试档，恢复时无条件以云端为准 */
+        }
+      } catch (e2) {}
+      sbSess = s; return true;
+    }
   } catch (e) {}
   sbSess = null; return false;
 }
@@ -7822,7 +7834,18 @@ function afterAcctReady() {
   if (em) em.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('acct-pw').focus(); });
   sbLoadSess();
   renderAcctUI();                                  // 恢复上次登录态（刷新后按钮要显示邮箱）
-  if (sbSess) { setAcctStatus('已登录 · 存档自动同步'); cloudPullIfNewer(); }   // W16.9
+  if (sbSess) {
+    setAcctStatus('已登录 · 存档自动同步');
+    if (window.__s1SessionFixed) {
+      /* WE7.0：刚从 s1- 测试身份切回正式身份，本地存的是测试期旧档，
+         不比时间戳，无条件拉云端正式档，防止测试档反把正式档盖掉 */
+      cloudPullFirst().then(function(r) {
+        if (r === 'pulled') refreshAllUI();
+      });
+    } else {
+      cloudPullIfNewer();                            // W16.9
+    }
+  }
 })();
 
 /* ============ W9.5：排行榜（总价值 = 金币 + 仓库 + 装备 + 安全箱） ============ */
@@ -11585,6 +11608,9 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'WE7.01', t:'2026年11月27日 20:45', items:[
+    { k:'修复', d:'重要修复：测试期登录过的同学打开新版本会显示测试期的旧档（东西「不见了」）——已修复，打开自动切回正式身份并载入云端正式存档，仓库、金币、装备原样恢复' }
+  ]},
   { v:'WE7.0', t:'2026年11月27日 20:00', items:[
     { k:'赛季', d:'S1 赛季「源头」正式上线！版本号迈入全新的 WE7.0，不再是测试服' },
     { k:'账号', d:'账号彻底与 S0 正式服合体：直接用正式服账号登录，仓库、金币、战绩、好友、排行榜原封不动，进游戏就是你现在的一切' },
