@@ -19,7 +19,7 @@
      （新 URL 必然绕过所有缓存层，再也不用手动清缓存）。BUILD 每次发版更新 -->
 <script>
 (function(){
-  var BUILD = 'WE7.02 2026-11-27 21:10';
+  var BUILD = 'WE7.03 2026-11-28 13:30';
   window.__BUILD = BUILD;
   /* 在保留原参数（如 sharecode）的前提下加/换 __v，确保强刷后分享链接不失效 */
   function withV() {
@@ -8494,16 +8494,29 @@ function runLive() { return !player.dead && !runEnded && !inMenu(); }
 
 /* ---------- 网络：创建 / 加入 / 离开 ---------- */
 /* W16.71：unbase 没有 SQL 函数，建房/加入/离开改为直接读写表（原 mp_create_room 等） */
-function mpRoomCode() {   /* S1：房号 9 开头 7 位 —— 与正式服 6 位房号空间隔离 */
+function mpRoomCode() {
   var o = '';
   var u = new Uint8Array(6); (crypto.getRandomValues ? crypto.getRandomValues(u) : u.forEach(function(_, i) { u[i] = Math.random() * 256 | 0; }));
-  for (var i = 0; i < 6; i++) o += String(u[i] % 10);
-  return '9' + o;
+  for (var i = 0; i < 6; i++) o += String(u[i] % 10);   // 纯数字：输入框是数字键盘
+  return o;
+}
+/* WE7.03：建房前查重 —— 组队码和正式服共用 6 位空间，撞上正在等待的房间就换一个 */
+function mpRoomCodeFresh(tries, cb) {
+  var code = mpRoomCode();
+  sbApi('/rest/v1/mp_rooms?code=eq.' + code + '&status=eq.waiting&select=rid&limit=1', {})
+    .then(function(rows) {
+      if (rows && rows.length) {
+        if (tries <= 1) { cb && cb(mpRoomCode()); return; }
+        mpRoomCodeFresh(tries - 1, cb);
+      } else cb && cb(code);
+    })
+    .catch(function() { cb && cb(code); });   // 查重失败不卡建房，直接用
 }
 function mpCreate(mapIndex, cb) {
   if (!sbSess) { cb && cb({ ok: false, reason: 'not_logged_in' }); return; }
   MP.busy = true;
-  var uid = frMe(), rid = ubUuid(), code = mpRoomCode();
+  var uid = frMe(), rid = ubUuid();
+  mpRoomCodeFresh(5, function(code) {
   sbApi('/rest/v1/mp_rooms', {
     method: 'POST', headers: { 'Prefer': 'return=minimal' },
     body: JSON.stringify({ rid: rid, code: code, status: 'waiting', map_index: mapIndex || 0 })
@@ -8523,12 +8536,13 @@ function mpCreate(mapIndex, cb) {
     MP.busy = false;
     cb && cb({ ok: false, reason: e.message || String(e) });
   });
+  });
 }
 function mpJoin(code, cb) {
   if (!sbSess) { cb && cb({ ok: false, reason: 'not_logged_in' }); return; }
-  var c = String(code || '').trim().toUpperCase();
+  var c = String(code || '').trim();
   if (!c) { cb && cb({ ok: false, reason: 'empty_code' }); return; }
-  if (!/^9\d{6}$/.test(c)) { cb && cb({ ok: false, reason: '源头房号是 9 开头的 7 位数字' }); return; }   /* S1 */
+  if (!/^\d{6}$/.test(c)) { cb && cb({ ok: false, reason: '请输入 6 位房间码' }); return; }   /* WE7.03：与正式服一致的 6 位房间码 */
   MP.busy = true;
   var uid = frMe(), rid = null;
   sbApi('/rest/v1/mp_rooms?code=eq.' + encodeURIComponent(c) + '&status=eq.waiting&select=rid,map_index&limit=1', {})
@@ -11394,7 +11408,7 @@ addEventListener('keydown', function(e) {
         <div class="mp-col">
           <div class="mp-or"><span>好友的房间码</span></div>
           <div class="mp-join-row">
-            <input id="mp-code-input" type="text" inputmode="numeric" maxlength="7" placeholder="9 开头的 7 位房号">
+            <input id="mp-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="6 位房间码">
             <button class="mp-action" id="mp-join" type="button">加入</button>
           </div>
           <div class="mp-tip" id="mp-tip"></div>
@@ -11615,6 +11629,10 @@ addEventListener('keydown', function(e) {
    【以后每次发版】在最上面插一条：{ v:'W16.21', t:'2026年11月9日 10:20', items:['改了啥','改了啥'] }
    时间格式固定为「YYYY年M月D日 HH:MM」，列表自动按数组顺序（新→旧）显示 ============ */
 var CHANGELOG = [
+  { v:'WE7.03', t:'2026年11月28日 13:30', items:[
+    { k:'修复', d:'组队房间码和 S0 正式服完全一致：统一的 6 位纯数字房间码，删掉「9 开头 7 位源头房号」——之前建出来的 7 位码连自己这边都提示「请输入 6 位房间码」，好友根本进不来' },
+    { k:'优化', d:'建房自动查重：生成的房间码如果撞上正在等待的房间，自动换一个，不会加错门' }
+  ]},
   { v:'WE7.02', t:'2026年11月27日 21:10', items:[
     { k:'修复', d:'联机「吸兵大法」修复：以前队友一开枪，附近人机就突然全围到你脸上——根因是队友端开枪的噪音错改了回放敌人的巡逻目标。现在队友开枪只惊动房主端的 AI（两边表现一致），队友端人机稳稳按房主快照行动，不再瞬移吸人' }
   ]},
